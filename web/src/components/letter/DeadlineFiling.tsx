@@ -42,7 +42,7 @@ export function DeadlineFiling({
 }) {
   const { deadline, filing } = letter;
   const known = deadline.source !== "unknown" && typeof deadline.date === "string" && deadline.date !== "";
-  const days = known ? (typeof deadline.days_left === "number" ? deadline.days_left : daysUntil(deadline.date as string, today)) : null;
+  const days = known ? daysUntil(deadline.date as string, today) : null;
   const sources = [deadline.citation, filing.citation].filter((c): c is CitationRef => c !== null && c !== undefined);
   const Heading = register ? "h3" : "h2";
   /* In the register's narrow margin column the label sits over its value. */

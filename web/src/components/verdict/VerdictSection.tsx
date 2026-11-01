@@ -58,6 +58,38 @@ function firstSentence(text: string): string {
 }
 
 /*
+  The payer's strip as whole words (N3): one inline-block per word, the space before it a no-break space inside
+  it. A word of one or two characters ("a", "to", "8") shares the box of the word after it (Alvaro, Oct 31), so the
+  line never ends on it before the ellipsis ("...per day..." rather than "...per day a..."); a short word at the
+  sentence's end shares the box of the word before it.
+*/
+const SHORT_WORD = 2;
+
+function WholeWords({ text, struck }: { text: string; struck: boolean }) {
+  const groups: string[][] = [];
+  let pending: string[] = [];
+  for (const w of text.split(/\s+/).filter((x) => x !== "")) {
+    pending.push(w);
+    if (w.length > SHORT_WORD) {
+      groups.push(pending);
+      pending = [];
+    }
+  }
+  if (pending.length > 0) {
+    if (groups.length > 0) groups[groups.length - 1].push(...pending);
+    else groups.push(pending);
+  }
+  return groups.map((g, i) => {
+    const box = `${i > 0 ? "\u00a0" : ""}${g.join("\u00a0")}`;
+    return (
+      <span key={i} className="inline-block">
+        {struck ? <s className="decoration-ink decoration-2">{box}</s> : box}
+      </span>
+    );
+  });
+}
+
+/*
   The verdict: one of three headlines, verbatim, as the page's h1 (it names
   the outcome) and its rubber stamp: red, condensed caps, turned, inked
   unevenly, the one stamp on the sheet (.stamp in globals.css); the rule with its
@@ -310,20 +342,17 @@ export function VerdictSection({
             and the steelman's first sentence in 17 px ink, one line, ending in an ellipsis when it is longer
             than the line; the disclosure above still opens the full argument under it. Under its heading, so
             the heading introduces it; on the phone the label sits over the sentence (a shared 326 px line
-            leaves the sentence about 20 characters). A struck steelman is struck here too.
+            leaves the sentence about 20 characters). A struck steelman is struck here too. The line ends on the
+            last whole word that fits, then the ellipsis (Oct 31, N3): each word is an inline-block, which an
+            ellipsis hides whole (a truncate and a line clamp both cut inside a word in Chromium), and the space
+            before a word is a no-break space inside its box, so it goes with the word.
           */}
           {steelText ? (
             <p className="flex min-w-0 flex-col pb-1 pl-7 lg:flex-row lg:items-baseline lg:gap-3" data-payer-strip={steelStruck ? "struck" : "true"}>
               <span className="shrink-0 text-[14px] leading-5 text-muted">The payer would say</span>
               <span className="min-w-0 truncate text-[17px] leading-[26px] text-ink">
-                {steelStruck ? (
-                  <>
-                    <span className="sr-only">Struck, could not verify: </span>
-                    <s className="decoration-ink decoration-2">{firstSentence(steelText)}</s>
-                  </>
-                ) : (
-                  firstSentence(steelText)
-                )}
+                {steelStruck ? <span className="sr-only">Struck, could not verify: </span> : null}
+                <WholeWords text={firstSentence(steelText)} struck={steelStruck} />
               </span>
             </p>
           ) : null}

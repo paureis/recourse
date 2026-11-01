@@ -111,7 +111,7 @@ export function ProofSheet() {
             className="mt-7 text-[28px] text-balance sm:mt-9 sm:text-[34px] lg:mt-9 lg:max-w-[calc(100%-380px)] lg:text-[32px] xl:max-w-[calc(100%-480px)] xl:text-[38px]"
           />
           {/* The Lead line: the phone's under 1024 px (PhoneLead), the reference block's Lead size from 1024 px. */}
-          <PhoneLead record={record} today={day} deadline={{ iso: deadlineIso, daysLeft: null }} className={`mt-5 ${unseen}`} />
+          <PhoneLead record={record} today={day} deadline={{ iso: deadlineIso }} className={`mt-5 ${unseen}`} />
           <div className={`hidden lg:mt-6 lg:block ${unseen}`} data-proof-lead="desktop">
             <DeadlineLine deadlineIso={deadlineIso} today={day} size="lead" />
           </div>

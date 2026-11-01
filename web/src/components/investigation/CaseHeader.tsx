@@ -27,20 +27,18 @@ const NEXT_STEP: Partial<Record<VerdictOutcome, string>> = {
 function NextStepLine({
   text,
   deadlineIso,
-  daysLeft,
   today,
   lead,
   className = "",
 }: {
   text: string;
   deadlineIso: string | null;
-  daysLeft: number | null;
   today: Date;
   /* The Lead size of the reference block at desktop (30 px); otherwise the phone's (20 px). */
   lead: boolean;
   className?: string;
 }) {
-  const days = deadlineIso ? (typeof daysLeft === "number" ? daysLeft : daysUntil(deadlineIso, today)) : null;
+  const days = deadlineIso ? daysUntil(deadlineIso, today) : null;
   const when = deadlineIso !== null && days !== null ? `Appeal by ${formatShortDate(deadlineIso)} · ${dayCountLabel(days)}` : null;
   return (
     <div className={className} data-next-step="true">
@@ -93,8 +91,8 @@ export function CaseHeader({
   today: Date;
   register?: boolean;
   titled?: boolean;
-  /* The letter's deadline (date and the API's day count) for the register's deadline line. */
-  deadline?: { iso: string | null; daysLeft: number | null } | null;
+  /* The letter's deadline date for the register's deadline line; the day count is always computed from today (Oct 31, N4). */
+  deadline?: { iso: string | null } | null;
 }) {
   const [open, setOpen] = useState(false);
   const fullId = useId();
@@ -157,7 +155,6 @@ export function CaseHeader({
         <NextStepLine
           text={nextStep}
           deadlineIso={deadline?.iso ?? deadlineIso}
-          daysLeft={deadline?.daysLeft ?? null}
           today={today}
           lead={false}
           className={`mt-4 ${register ? "lg:hidden" : ""}`}
@@ -165,7 +162,6 @@ export function CaseHeader({
       ) : (
         <DeadlineLine
           deadlineIso={deadline?.iso ?? deadlineIso}
-          daysLeft={deadline?.daysLeft ?? null}
           today={today}
           size="line"
           className={`mt-4 ${register ? "lg:hidden" : ""}`}
@@ -181,7 +177,7 @@ export function CaseHeader({
         ))}
       </dl>
 
-      {register ? <Register record={record} today={today} deadline={deadline ?? { iso: deadlineIso, daysLeft: null }} nextStep={nextStep} /> : null}
+      {register ? <Register record={record} today={today} deadline={deadline ?? { iso: deadlineIso }} nextStep={nextStep} /> : null}
 
       <button
         ref={toggleRef}
@@ -190,7 +186,12 @@ export function CaseHeader({
         aria-controls={open ? fullId : undefined}
         onClick={() => setOpen((o) => !o)}
         className={`mt-3 inline-flex min-h-11 items-center px-1 text-[16px] font-semibold text-ink underline underline-offset-4 ${
-          register ? "lg:mt-2 lg:-ml-1 lg:text-[15px] xl:absolute xl:right-0 xl:-bottom-3 xl:mt-0 xl:ml-0" : ""
+          /*
+            From 1280 px on a row of its own under the reference rows, right-aligned (Oct 31, N9): it sat absolutely
+            at the block's bottom right, where a long last value ran into it ("Not stated in the letterShow the full
+            case card" on dc-010). From 1024 to 1279 it is in the flow as before.
+          */
+          register ? "lg:mt-2 lg:-ml-1 lg:text-[15px] xl:ml-auto xl:flex xl:w-fit" : ""
         }`}
         data-case-card-toggle="true"
       >
@@ -199,7 +200,7 @@ export function CaseHeader({
       {open ? (
         <div
           id={fullId}
-          className={`mt-4 ${register ? "lg:absolute lg:inset-x-0 lg:top-full lg:mt-0 xl:mt-4 lg:border lg:border-ink lg:bg-bond lg:px-5 lg:pt-1 lg:pb-5" : ""}`}
+          className={`mt-4 ${register ? "lg:absolute lg:inset-x-0 lg:top-full lg:mt-0 lg:border lg:border-ink lg:bg-bond lg:px-5 lg:pt-1 lg:pb-5" : ""}`}
           data-case-card-full="true"
         >
           <CaseCard
@@ -235,7 +236,7 @@ function Register({
 }: {
   record: CaseRecord;
   today: Date;
-  deadline: { iso: string | null; daysLeft: number | null };
+  deadline: { iso: string | null };
   /* The next step that leads instead of the deadline (consistent and not settled, once decided). */
   nextStep: string | null;
 }) {
@@ -255,13 +256,12 @@ function Register({
       <div className="grid" data-register-lead={nextStep ? "next-step" : "deadline"}>
         <DeadlineLine
           deadlineIso={deadline.iso}
-          daysLeft={deadline.daysLeft}
           today={today}
           size="lead"
           className={`col-start-1 row-start-1 ${nextStep ? "invisible" : ""}`}
         />
         {nextStep ? (
-          <NextStepLine text={nextStep} deadlineIso={deadline.iso} daysLeft={deadline.daysLeft} today={today} lead className="col-start-1 row-start-1" />
+          <NextStepLine text={nextStep} deadlineIso={deadline.iso} today={today} lead className="col-start-1 row-start-1" />
         ) : null}
       </div>
       <dl className="mt-5 grid grid-cols-[120px_minmax(0,1fr)] gap-x-3 gap-y-1.5 border-t border-ink/25 pt-4 tabular-nums">
@@ -307,19 +307,18 @@ export function PhoneLead({
 }: {
   record: CaseRecord;
   today: Date;
-  deadline: { iso: string | null; daysLeft: number | null } | null;
+  deadline: { iso: string | null } | null;
   className?: string;
 }) {
   const claimed = record.card.appeal_deadline_claimed.value;
   const iso = deadline?.iso ?? (typeof claimed === "string" && claimed !== "" ? claimed : null);
-  const daysLeft = deadline?.daysLeft ?? null;
   const nextStep = record.verdict?.status === "done" ? (NEXT_STEP[record.verdict.outcome] ?? null) : null;
   return (
     <div className={`lg:hidden ${className}`} data-phone-lead={nextStep ? "next-step" : "deadline"}>
       {nextStep ? (
-        <NextStepLine text={nextStep} deadlineIso={iso} daysLeft={daysLeft} today={today} lead={false} />
+        <NextStepLine text={nextStep} deadlineIso={iso} today={today} lead={false} />
       ) : (
-        <DeadlineLine deadlineIso={iso} daysLeft={daysLeft} today={today} size="line" />
+        <DeadlineLine deadlineIso={iso} today={today} size="line" />
       )}
     </div>
   );

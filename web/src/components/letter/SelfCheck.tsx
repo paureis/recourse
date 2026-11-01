@@ -26,8 +26,8 @@ import { InlineChip, LetterFrame } from "./AppealLetter";
   evidence checklist. The issues the critic found as a plain list (kind and
   severity in words, Fixed or Not fixed), then each sentence that changed as
   a before and after pair, then the first draft behind a toggle. The letter
-  above stays the one people copy. A rejected revision says so and the first
-  draft stands; a critic error names itself; a skipped check is one muted line.
+  above stays the one people copy. A rejected revision says so and the draft
+  stands as written; a critic error names itself; a skipped check is one muted line.
 */
 export function SelfCheck({
   critique,
@@ -97,7 +97,7 @@ export function SelfCheck({
 
       {!kept ? (
         <p className="mt-4 text-[18px] leading-relaxed font-semibold lg:text-[17px]" data-rejected="true">
-          {rejectedWhy ? `The revision was not accepted: ${asClause(rejectedWhy)}. The first draft stands.` : "The first draft stands."}
+          {rejectedWhy ? `The revision was not accepted: ${asClause(rejectedWhy)}; the draft stands as written.` : "The draft stands as written."}
         </p>
       ) : null}
       {kept && laterError ? (

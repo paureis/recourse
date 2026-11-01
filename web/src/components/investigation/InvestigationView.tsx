@@ -354,12 +354,11 @@ export function InvestigationView({ caseId }: { caseId: string }) {
     ? "max-lg:border max-lg:border-ink max-lg:bg-bond max-lg:p-5 lg:flow-root lg:border lg:border-ink lg:bg-bond lg:px-10 lg:pt-8 lg:pb-10"
     : "";
 
-  /* The letter's deadline (date and the API's day count) once the letter stage is done, for the Lead lines. */
+  /* The letter's deadline date once the letter stage is done, for the Lead lines; the count is today's, never the stored one (Oct 31, N4). */
   const letterDeadline =
     annotated && letter
       ? {
           iso: letter.deadline.source !== "unknown" && typeof letter.deadline.date === "string" && letter.deadline.date !== "" ? letter.deadline.date : null,
-          daysLeft: letter.deadline.days_left,
         }
       : null;
 

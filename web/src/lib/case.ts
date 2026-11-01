@@ -1381,12 +1381,74 @@ export function citationLabel(c: { title: string | null; doc_id: string }): stri
 }
 
 /*
-  The letter as plain text: To, Re, then the paragraphs. Struck sentences are
-  left out; each verified claim is followed by "[cite: title, p. N]".
+  The letter's frame, read from the sentences at render (Oct 31, N1): the model writes the salutation into
+  the first sentence ("Dear Appeals Department, I am writing ...") and the sign-off as the last one
+  ("Sincerely, [Your name]."). letterParts splits them off so the salutation, the closing word and the name
+  are lines of their own on the sheet, the phone letter, the copy, the download and the print. The record is
+  never edited: a split sentence keeps its claim, citation and verification, and only an unstruck sentence is
+  split (a salutation or a closing is never a claim; a claim sentence keeps its closing rather than lose its
+  footnote). Where the first sentence has no salutation, or the last no closing, nothing changes.
+*/
+const SALUTATION = /^\s*((?:Dear\s+[^,:.!?\n]{1,80}|To Whom It May Concern)[,:])\s*([\s\S]*)$/;
+const CLOSING = /^([\s\S]*?[.!?]["”)]?\s+)?(Sincerely(?: yours)?|Respectfully(?: yours| submitted)?|(?:Best |Kind |Warm )?[Rr]egards|Yours (?:truly|sincerely|faithfully)),\s*([\s\S]*?)\s*$/;
+
+export interface LetterParts {
+  /* "Dear Appeals Department," with the model's comma or colon, or null. */
+  salutation: string | null;
+  /* The paragraphs with the salutation and the sign-off taken out; an emptied paragraph is dropped. */
+  paragraphs: Paragraph[];
+  /* "Sincerely," and the name under it ("[Your name]", without the period after the bracket), or null. */
+  closing: { word: string; name: string } | null;
+}
+
+/* The name under the closing word, without the sentence's final period ("[Your name]." reads "[Your name]"); an initial or "Jr." keeps it. */
+function closingName(raw: string): string {
+  const name = raw.trim();
+  if (!name.endsWith(".")) return name;
+  if (/\]\.$/.test(name) || !/(?:^|\s)[A-Za-z]{1,2}\.$/.test(name)) return name.slice(0, -1).trimEnd();
+  return name;
+}
+
+export function letterParts(paragraphs: Paragraph[]): LetterParts {
+  const out = paragraphs.map((p) => ({ sentences: [...(p.sentences ?? [])] }));
+  let salutation: string | null = null;
+  let closing: LetterParts["closing"] = null;
+
+  const first = out[0]?.sentences[0];
+  if (first && !sentenceStruck(first)) {
+    const m = SALUTATION.exec(first.text);
+    if (m) {
+      salutation = m[1];
+      const rest = m[2].trim();
+      if (rest === "") out[0].sentences.shift();
+      else out[0].sentences[0] = { ...first, text: rest };
+    }
+  }
+
+  const lastP = out[out.length - 1];
+  const last = lastP?.sentences[lastP.sentences.length - 1];
+  if (last && !sentenceStruck(last) && !last.claim) {
+    const m = CLOSING.exec(last.text);
+    if (m) {
+      closing = { word: `${m[2]},`, name: closingName(m[3]) };
+      const before = (m[1] ?? "").trim();
+      if (before === "") lastP.sentences.pop();
+      else lastP.sentences[lastP.sentences.length - 1] = { ...last, text: before };
+    }
+  }
+
+  return { salutation, paragraphs: out.filter((p) => p.sentences.length > 0), closing };
+}
+
+/*
+  The letter as plain text: To, Re, the salutation on its own line, then the
+  paragraphs, then the closing word and the name on lines of their own. Struck
+  sentences are left out; each verified claim is followed by "[cite: title, p. N]".
 */
 export function letterPlainText(letter: Pick<Letter, "to" | "re" | "paragraphs">): string {
   const head = [`To: ${letter.to}`, `Re: ${letter.re}`];
-  const body = (letter.paragraphs ?? [])
+  const parts = letterParts(letter.paragraphs ?? []);
+  const body = parts.paragraphs
     .map((p) =>
       (p.sentences ?? [])
         .filter((s) => !sentenceStruck(s))
@@ -1398,7 +1460,9 @@ export function letterPlainText(letter: Pick<Letter, "to" | "re" | "paragraphs">
         .join(" "),
     )
     .filter((p) => p !== "");
-  return `${head.join("\n")}\n\n${body.join("\n\n")}\n`;
+  const closing = parts.closing ? [[parts.closing.word, parts.closing.name].filter((x) => x !== "").join("\n")] : [];
+  const blocks = [...(parts.salutation ? [parts.salutation] : []), ...body, ...closing];
+  return `${head.join("\n")}\n\n${blocks.join("\n\n")}\n`;
 }
 
 /* The letter's counts as a sentence: counts, never a percentage. */
@@ -1656,7 +1720,7 @@ export function selfCheckLine(critique: Critique): { lead: string; detail: strin
   const lead = `${found} ${found === 1 ? "issue" : "issues"} found, ${fixed} fixed`;
   if (!first) return { lead, detail: "" };
   const vb = first.verification_before;
-  if (!last) return { lead, detail: `the first draft stands, letter sentences verified ${vb.verified} of ${vb.claims}` };
+  if (!last) return { lead, detail: `the draft stands as written, letter sentences verified ${vb.verified} of ${vb.claims}` };
   const va = last.verification_after;
   return { lead, detail: `letter sentences verified ${va.verified} of ${va.claims} after the check (was ${vb.verified} of ${vb.claims})` };
 }

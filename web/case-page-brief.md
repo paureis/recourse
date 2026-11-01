@@ -1721,3 +1721,172 @@ corrected to 1,403 at 1280 and 1,387 at 1024 (the 44 px crop control) and the ma
 M5's visible change is the band at 1024 px and up only (the phone's line is a screen-reader region). Against the
 first round, exactly the 12 desktop M4 captures differ, each in the leaf's 18 by 18 box; the other 36 are
 byte-identical; against the base, 31 of 31 differ and 17 of 17 are identical; re-checked by the same evaluator (Oct 30, 11:44 pm): all nine items pass, 48 of 48 captures as expected against the base and against the first round, ready to commit.
+
+## 20. Bug bash, round two: the UI final look (Oct 31, 2026)
+
+Nine items Alvaro picked by prompt on Oct 31 from the final visual review of the deployed site at `06ff755`
+(a fresh agent's 72 captures of 36 states at 1280 and 390, its ranked list, and the orchestrator's look; the
+record is `C:\Users\pau\AppData\Local\Temp\claude\ui-final\review.md` and its captures). The video is recorded
+Tuesday Nov 3, so each item is what a judge sees on the link or on camera. Made by the orchestrator within
+sections 9 to 19 and DESIGN.md (N1 to N9), then by the builder where marked. Files: `AppealLetter.tsx`,
+`ActionSection.tsx`, `DeadlineFiling.tsx`, `SelfCheck.tsx`, `CaseHeader.tsx`, `InvestigationView.tsx`,
+`VerdictSection.tsx`, `DeadlineStamp.tsx`, `case.ts`, `page.tsx`, `DESIGN.md` where a rule changes, and the
+place that preloads the sample page image. Nothing in `api/`, `policyqa/`, `cases/` or `sample-case.ts` (the
+recorded run's text is never edited; every change is in the rendering). The control for the whole section is one
+before-and-after capture set (two production builds, the base a worktree of `f3dd4b7`, which has the web of
+`06ff755`; `animations: "disabled"`; one page at a time: the 8 fixture pages at reviewed, the intake's three
+states, the landing, at 1280 by 800, 1024 by 800, 768 by 1024 and 390 by 844) with the list below of the
+captures each item is expected to change; every capture outside the union of those lists is byte-identical, and
+every capture inside it differs (the set can fail both ways). `c_sample` is also captured at 1440 by 900 for N9.
+
+- N1. The salutation and the sign-off as lines of their own. The model writes the letter's first sentence as
+  "Dear Appeals Department, I am writing to appeal ..." (or "Dear Appeals Department: ...") and its last as
+  "Sincerely, [Your name]." (the sample record, `sample-case.ts` 954 and 1078; the live cases the same). On the
+  sheet, on the phone's letter, in the copy, the download and the print, the letter reads as a letter: the
+  salutation ("Dear Appeals Department," with its comma, or the colon when the model wrote one) on its own line
+  before the first paragraph, with a paragraph's gap under it; the first paragraph then starts at "I am writing".
+  At the end, the closing word ("Sincerely," and the same for "Respectfully," or "Regards,") on its own line under
+  the last paragraph, and the name on the line under it (the gold-wash "Fill in" name field where the sign-off
+  carries the "[Your name]" placeholder; plain text otherwise), without the trailing period the model put after
+  the bracket. Done at render by splitting the sentence text, never by editing the record: the sentence's
+  footnote number, chip, strike and verification state stay with the sentence that carries them (a salutation
+  or a closing is never a claim; the builder confirms no footnote attaches to them in the fixtures). Where the
+  first sentence has no salutation, or the last no closing, nothing changes. The reader order is the visible
+  order. Expected to differ: every fixture with a letter (`c_sample`, `c_rejected`, `c_checkerror`, and any other
+  the builder lists) at all four widths; the print capture of `c_sample` at 1280.
+- N2. A paragraph may continue on the next page. The sheet moves a whole paragraph to the next page when it
+  would cross the bottom margin (`AppealLetter.tsx`, the comment "A paragraph never splits across a page"). On
+  `c_sample` at 1280 that leaves page 1 with one paragraph over about 257 px of blank bond and puts the signature
+  block alone on page 3, while the print is two pages. Now a paragraph that crosses the bottom margin breaks at
+  a line boundary (never inside a word or a line): the lines that fit stay on the page, the rest resume at the
+  next page's top margin, with no line drawn over the desk strip or inside a margin. Where the paragraph allows,
+  at least two of its lines sit on each side of the break; a short paragraph that cannot give two lines to each
+  side moves whole as today. The head block (date, address, Re) and the closing block (the sign-off line, the
+  name and the signature fields) never split and never stand alone on a page when the preceding paragraph can
+  give them lines. The folio count equals the pages drawn. The sidenotes keep their anchors (a note anchors to
+  its paragraph's first line, as today), the expanded quote and "page N" overlays still open and close, the
+  layout stays idempotent (spacers reset before each measure, no render loop; the ResizeObserver still settles).
+  The builder chooses the mechanism and says why; one acceptable shape is a block-level spacer placed before the
+  first word that crosses the page's bottom margin, sized to the rest of the page plus the gap plus the next
+  top margin, found by measuring the sentence's line boxes (`Range.getClientRects`). Measured on `c_sample` at
+  1280 and 1024: two pages, the folio "Page 1 of 2" and "Page 2 of 2", page 1's last line within one line
+  height of the bottom margin, the signature block on page 2; the print still two US Letter pages. Expected to
+  differ: `c_sample` at 1280 and 1024 (and any letter fixture whose pagination changes; the builder lists them,
+  with the page count before and after for each).
+- N3. The payer's strip ends on a whole word. "The payer would say" and the steelman's first sentence in one
+  line (`VerdictSection.tsx`, the strip of G2) is cut by `truncate` in the middle of a word ("...and denie...",
+  "...per day a..."). It now ends after the last whole word that fits, then the ellipsis (a one-line clamp:
+  `-webkit-line-clamp: 1` on a `-webkit-box`, or the builder's equivalent), at every width, for the plain and
+  the struck strip alike; the line's height and the strip's position do not change. Expected to differ: every
+  fixture with a verdict and a strip longer than its line (the builder lists them, by width).
+- N4. The day count is always today's. Five places prefer a stored `days_left` over `daysUntil(date, today)`:
+  `CaseHeader.tsx` 43, `DeadlineStamp.tsx` 36 and 106, `ActionSection.tsx` 18 and `DeadlineFiling.tsx` 45, fed
+  by `InvestigationView.tsx` 362; a live case therefore shows the count of the day it was opened (c_7cf7ad reads
+  "38 days left" on Oct 31 for Dec 6, 2026, when 36 is right; the replay recomputes, `case.ts` 2340, so the sample
+  is right). Every displayed count, in the Lead, the register, the letter's deadline line, the filing sheet and
+  the copied or downloaded text, is computed from the deadline date and today; the stored number is never
+  displayed. The replay's and the fixtures' output does not change (their stored numbers already equal today's).
+  Live check after the deploy: `/case/c_7cf7ad` reads the count `daysUntil("2026-12-06", today)` on the Lead and
+  in the letter's margin line; `/case/c_d2d12f` reads `daysUntil("2026-11-29", today)`. Expected to differ: no
+  capture (the builder confirms it with the set; if a fixture carries a stale stored count, it lists it).
+- N5. The band's words everywhere. The self-check sheet says "The first draft stands." and "The revision was
+  not accepted: ... The first draft stands." (`SelfCheck.tsx` 100), and the receipt's detail reads "the first
+  draft stands, letter sentences verified ..." (`case.ts` 1659), while the band says "Letter checked. The draft
+  stands as written." (M5). They now read "The draft stands as written." and "The revision was not accepted:
+  ...; the draft stands as written." and "the draft stands as written, letter sentences verified ...". The
+  self-check's issue list and its "Not fixed" marks are unchanged (an issue found and a revision not accepted is
+  the truthful state). Tests or checks asserting the old strings are updated. Expected to differ: every fixture
+  whose self-check or receipt carries the phrase (`c_sample`, `c_rejected`, `c_checkerror` at least; the builder
+  lists them) at every width where that section renders.
+- N6. The landing's first sentence. "Photograph the denial letter, or paste its text." promises a photo door
+  the desktop intake no longer has (M6). It reads "Add the denial letter as a photo, a PDF or its text." (Alvaro's
+  choice of three wordings, Oct 31); the rest of the paragraph as today. Any document that quotes the old
+  sentence (DESIGN.md, this brief's section 12 or 18) is updated where it states the current wording, not where
+  it records history. Expected to differ: the landing at all four widths.
+- N7. The preload warning. Every case page and the intake log "/sample/fl-04-p5.png was preloaded using link
+  preload but not used within a few seconds" (none on the landing, where the proof sheet shows that image). The
+  server HTML carries no image preload, so it is added on the client (search for `ReactDOM.preload`, a created
+  `link` element, `fetchPriority`, or the sample page list being warmed on every page). The image is preloaded
+  only where it is shown within a few seconds (the landing and `c_sample`), or not at all; no page logs the
+  warning afterwards. Expected to differ: no capture.
+- N8. The phone letter is complete. Under 1024 px the letter frame shows To, Re and the paragraphs, but no date
+  line and no signature block, while its intro says "Add your name, member ID, and signature." The phone letter
+  gains the date line at its top (today's date, as the desktop's) and the closing block under the sign-off
+  (Signature, Member ID, Date; Name too when the sign-off carries no name placeholder; the same gold-wash "Fill
+  in" fields as the desktop, in two columns of the 358 px frame at 390, Signature on a row of its own when it
+  has no partner), inside the hairline frame, with the frame's inset. The copy and the download are the desktop's
+  text already and do not change. Expected to differ: every fixture with a letter at 390 and 768.
+- N9. The case card link on its own row. At 1280 px and up the reference block's "Show the full case card" sits
+  absolutely at the block's bottom right (`CaseHeader.tsx` 190 to 197, the `xl:` classes), so a long last value
+  runs into it: dc-010 reads "Not stated in the letterShow the full case card" (`c_d2d12f` at 1280). The link
+  moves into the flow on a row of its own under the reference rows, right-aligned, at every width from 1024 (as it
+  already is at 1024 to 1279); the rows' values keep the full value column; the block's words do not move; the
+  content under the block moves down by the link's row where the block is the taller column. The builder
+  measures the exhibit pair's new top at 1280 and 1440 on `c_sample` and updates DESIGN.md's measured numbers
+  where they state the old position. Live check after the deploy: `/case/c_d2d12f` at 1280 shows the value and
+  the link on separate rows with the value whole. Expected to differ: every fixture with a reference block at
+  1280 (and `c_sample` at 1440); nothing at 1024, 768 or 390.
+- N10. Verification the builder owes before reporting: `npx tsc --noEmit`, `npm run lint`, `npm run build`
+  clean; the capture set above with the expected-differences list and the byte comparison both ways; the N2
+  measurements (page count and page 1's last line) on `c_sample` at 1280 and 1024 and the print PDF's page
+  count; the N9 measurements; the heading outline of `c_sample`, the landing and the intake unchanged at 1280 and
+  390; the reader order of the letter (salutation, paragraphs, closing, name, fields) at 1280 and 390; the copy
+  and the download text of `c_sample` with the salutation and the closing on their own lines; the console of
+  `c_sample`, `c_consistent` and the intake free of the preload warning. A fresh evaluator grades N1 to N10 before
+  the orchestrator looks; Alvaro's look settles N1's lines, N2's break and N8's block.
+
+Decided by Alvaro (Oct 31, 2026, by prompt): all nine items in. N2's two-page target was wrong: the sample's text needs
+more than two pages' room at 1280 once the salutation has its own line (696.8 px of content against 658 px on page 2)
+and at 1024 even on the base (about 1,506 px against 1,120); the measured outcome is accepted in its place: the sheet is
+as many pages as the text needs, page 1 fills, the closing block takes the last two lines of the paragraph above it,
+and three fixtures go from three pages to two at 1024. The API's plain-text letter export was changed to match N1 on
+the Python side the same evening (test first, a fresh evaluator, 494 tests; recourse `546ee08`, deployed to Modal), so
+a live case's download reads as the sheet does.
+
+Decided by the builder, with the reason (Oct 31, 2026; measured on production builds against a worktree of `f3dd4b7`,
+scripts and captures under `C:\Users\pau\AppData\Local\Temp\claude\bash2-web\`):
+
+- N1 is `letterParts()` in `case.ts`, a render-time split; only an unstruck sentence is split; a split sentence keeps
+  its claim, citation and verification; a claim sentence keeps its closing so no footnote is orphaned. Salutations
+  are "Dear ..." and "To Whom It May Concern" up to the comma or colon (a name of 1 to 80 characters without a
+  sentence mark); closings are Sincerely, Respectfully, Regards and their Best, Kind, Warm, "yours" and "submitted"
+  forms, and Yours truly, sincerely or faithfully; a closing may end the last sentence; the period after the name is
+  kept when the last word has one or two letters ("Jr.", an initial). The fixture letters have no salutation or
+  closing, so N1 changes `c_sample` only. The self-check's first-draft toggle gets the lines but no date and no fields
+  (read-only). The closing block sits one paragraph gap (20 px) under the last paragraph; the fields 24 px under the
+  name.
+- N2 is two floats at the paragraph's start: a zero-width float as tall as the kept lines plus half a line, and a
+  full-width float that clears it and spans the rest of the page, the desk strip and the next top margin, so the next
+  line box starts under it; no text node is split and nothing re-renders. Two lines on each side; the closing block
+  pulls two lines; a paragraph whose height is not a whole number of lines moves whole. Measured on the nine-item
+  build: `c_sample` at 1280 three pages, page 1 breaking p1 after 6 of 9 lines with its last line box 15.8 px above the
+  margin, page 2 ending after p3's first three lines with 276.9 px free (the closing block plus two lines needs about
+  311), page 3 with p3's last two lines, the sign-off, the name and the fields; at 1024 three pages with the paragraphs
+  moving whole (p1 could keep one line); `c_rejected`, `c_checkerror`, `c_error` at 1024 from three pages to two; the
+  print two pages; idle style writes 0 in 4 s; the quote and page overlays open and close back to the same layout; the
+  1280 to 1024 to 1280 round trip returns the same layout.
+- N3: a one-line clamp still cut inside a word (Chromium removes characters to fit the ellipsis), so each word is an
+  inline-block the ellipsis hides whole, with its leading space a no-break space inside the box; the strip's box
+  unchanged (30 px tall at 1280, 50 at 390).
+- N4: the `daysLeft` prop and field are removed, so a stored count cannot be displayed; no fixture carried a stale
+  count, so no capture changes.
+- N7: the warning came from React's server render of the landing's exhibit image, which emits a `Link: rel=preload;
+  as="image"` header that Vercel also sends on the route's segment-prefetch responses; `fetchPriority="low"` on the
+  landing's settled crop (the `quiet` prop) drops the preload everywhere; the base's landing header carried the image,
+  the change's carries only the font. The warning does not reproduce locally; the live console is the check.
+- N8: the phone letter's date line and the shared `SignOff` block inside the frame (324 px wide at 390, the fields 129
+  px each; Signature alone on its row when it has no partner).
+- N9 at 1024 kept as it was (left-aligned, byte-identical), since the brief said both "right-aligned from 1024" and
+  "nothing at 1024"; from 1280 the link is in the flow on its own row, the open full card hangs under it (the
+  `xl:mt-4` that compensated for the absolute link removed); the exhibit pair's top moves from 371.2 to 423.2 at 1280
+  and 1440 on `c_sample`; DESIGN.md's 1280 sentence updated.
+- The control: 50 captures (the 8 fixtures, the intake's three states and the landing at four widths, `c_sample` at
+  1440 and the print), the union of the expected lists 35 (N1 six, N3 twenty-nine, N5 thirteen, N6 four, N8 eight, N9
+  nine, N2 five already inside it), 35 of 35 differ and 15 of 15 identical against the base; against the eight-item
+  tree exactly N2's five differ; heading outlines, reader order, copy and download text, consoles as the brief asks.
+- Base install: `socket npm ci` refused the unchanged lockfile (moderate minimatch advisories), so `npm ci` was used
+  on it, as the global rule allows for a lockfile install.
+
+Alvaro's look (Oct 31, about midnight, on the builder's production captures at 1280 and 390): N1's lines, N2's break and N8's block pass as built. One addition by prompt for the fix round: the strip (N3) also hides a trailing word of one or two letters before the ellipsis, so the phone's line ends "...8 hours per day..." rather than "...per day a...".
+
+Fix round (Nov 1, about 1:00 am; the same builder; no second evaluator pass, by the hour and the size of the items, recorded here as such): the strip glues a word of one or two characters to the word after it inside one inline-block with a no-break space, so the ellipsis never follows a short word (seven strips change their last word; the strip's box unchanged); DESIGN.md's landing numbers at 390 after N6: the sheet at 685, the stamp 764 to 891, the page 2,074; the closing block's pull reworked after a synthetic probe that grew p3 one sentence at a time in the live DOM (the case the evaluator named, a block starting inside the bottom margin, the pull re-measuring a broken paragraph, a remainder longer than a page): a second float pair per paragraph, the line measure kept from before the break, the whole-lines test on the fractional height; the closing block keeps two or more lines on its page from 5 to 47 lines of p3, alone from 49 (a third break, about 650 words in one paragraph); every letter fixture at 1280 and 1024 keeps the nine-item layout, 0 idle style writes, the overlays and the width round trip return the same layout, the print two pages; 27 recaptures against the nine-item set as expected (the seven changed strips, sub-pixel shifts inside the strip row where a merged box is visible, the rest byte-identical); tsc, lint and build clean.

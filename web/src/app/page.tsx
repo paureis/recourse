@@ -23,7 +23,7 @@ export default function Home() {
             A coverage denial becomes a case, and the case works itself.
           </h1>
           <p className="mt-5 text-[18px] leading-relaxed lg:max-w-[70ch] lg:text-[17px]">
-            Photograph the denial letter, or paste its text. Recourse reads it into a case card you check, finds the
+            Add the denial letter as a photo, a PDF or its text. Recourse reads it into a case card you check, finds the
             written rule that governs the service, and tells you whether the denial holds. If it does not, you get the
             appeal letter, the evidence list, the deadline, and where to file.
           </p>

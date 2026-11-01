@@ -1,15 +1,17 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   API_URL,
   INTAKE_MODE,
   citationLabel,
   isFixtureCase,
+  letterParts,
   letterPlainText,
   sentenceStruck,
   type CitationRef,
   type Letter,
+  type LetterParts,
   type LetterSentence,
   type Paragraph,
 } from "@/lib/case";
@@ -38,14 +40,17 @@ const NOTE_GAP = 20;
 
 /*
   The appeal letter. On the phone and tablet: set on bond in a hairline frame,
-  To, Re, then the paragraphs, every claim sentence with a small citation chip
-  (title, page; the quote on toggle). At desktop width (desk): the Annotated
-  Letter, a real document: US Letter pages of bond with a 1 px ink edge on the
-  darker desk, each with its folio ("Page 1 of 2"); a date line, the inside
-  address and the Re line; the paragraphs at 18 px; the closing block with the
-  fields to fill in by hand in gold wash ("Fill in", gold being reserved for
-  what the person must check or complete). A paragraph never splits across a
-  page; it moves to the next one.
+  the date line, To, Re, the salutation, the paragraphs, the closing word and
+  the name, then the fields to sign with (Oct 31, N1 and N8); every claim
+  sentence with a small citation chip (title, page; the quote on toggle). At
+  desktop width (desk): the Annotated Letter, a real document: US Letter pages
+  of bond with a 1 px ink edge on the darker desk, each with its folio ("Page 1
+  of 2"); a date line, the inside address and the Re line; the salutation on
+  its own line; the paragraphs at 18 px; the closing word and the name on lines
+  of their own, then the fields to fill in by hand in gold wash ("Fill in", gold
+  being reserved for what the person must check or complete). A paragraph that
+  crosses a page's bottom margin breaks at a line boundary and resumes at the
+  next page's top margin (Oct 31, N2; see the layout below).
 
   Beside the sheet, the margin: next to the sheet head the deadline, Copy the
   letter and Download as text; next to each paragraph its notes, set as
@@ -71,7 +76,7 @@ export function AppealLetter({
   letter: Letter;
   caseId: string;
   desk?: boolean;
-  /* The date line at the sheet's head (desk only). */
+  /* The date line at the letter's head: the sheet's, and the phone letter's top (N8). */
   today?: Date | null;
   /* "Appeal by Dec 6, 2026, 41 days left", in the margin beside the sheet head (desk only). */
   deadlineLine?: string | null;
@@ -141,7 +146,7 @@ export function AppealLetter({
   if (!desk) {
     return (
       <div className="mt-4">
-        <LetterFrame to={letter.to} re={letter.re} paragraphs={paragraphs} label="Appeal letter" kind="final" />
+        <LetterFrame to={letter.to} re={letter.re} paragraphs={paragraphs} label="Appeal letter" kind="final" today={today} />
         {actions}
       </div>
     );
@@ -192,7 +197,10 @@ function Sheet({
   deadlineLine: string | null;
 }) {
   const noteBase = useId();
-  const groups = numberNotes(paragraphs);
+  /* The salutation and the sign-off as lines of their own (N1); the notes number the paragraphs between them. */
+  const parts = useMemo(() => letterParts(paragraphs), [paragraphs]);
+  const body = parts.paragraphs;
+  const groups = numberNotes(body);
   /* The one expanded quote, by footnote number. Pages open through the viewer provider; one of the two at a time. */
   const [openNote, setOpenNote] = useState<number | null>(null);
   const viewer = usePageViewer();
@@ -236,12 +244,27 @@ function Sheet({
   }, [openNote]);
 
   /*
-    Pagination and the sidenotes, measured once per layout change: every
-    paragraph that would cross a page's bottom margin moves to the next page
-    (a spacer before it takes up the rest of the page and the desk strip),
-    then each margin block is placed at its anchor's top or under the block
-    above it, whichever is lower. Only spacer heights and note offsets are
-    written, so nothing re-renders but the page count.
+    Pagination and the sidenotes, measured once per layout change (Oct 31, N2).
+    A paragraph that crosses a page's bottom margin breaks at a line boundary:
+    the lines that fit stay, the rest resume at the next page's top margin. The
+    break is two floats at the paragraph's start (BreakFloats): a zero-width one
+    as tall as the lines that stay, then a full-width one that clears it and is
+    as tall as the rest of the page, the desk strip and the next top margin, so
+    the next line box cannot sit beside it and starts under it. No text node is
+    split and nothing re-renders. A second pair breaks a paragraph a second
+    time (a remainder longer than a page, or the closing block's pull below).
+    At least two lines stay on each side; a
+    paragraph that cannot give two to each side, the head block and the closing
+    block move whole (a spacer before them). The closing block never stands
+    alone: when it would move, even from inside the bottom margin, the
+    paragraph above gives it its last two lines (from its tail when it already
+    spans a page, the tail has four or more and a pair is free; Oct 31 fix round).
+    Lines are counted from the paragraph's line height; a paragraph whose height
+    is not a whole number of lines (an inline element taller than the line)
+    moves whole. Then each margin block is placed at its anchor's top or under
+    the block above it, whichever is lower. Spacers and floats are reset before
+    every measure, and only their heights and the note offsets are written, so
+    nothing re-renders but the page count.
   */
   useLayoutEffect(() => {
     const article = articleRef.current;
@@ -253,21 +276,108 @@ function Sheet({
       if (width === 0) return;
       const pageH = Math.round(width * PAGE_RATIO);
       const pitch = pageH + PAGE_GAP;
+      const room = pageH - 2 * MARGIN;
       const spacers = Array.from(article.querySelectorAll<HTMLElement>("[data-page-spacer]"));
       for (const s of spacers) s.style.height = "0px";
+      for (const f of Array.from(article.querySelectorAll<HTMLElement>("[data-break-float]"))) {
+        f.style.display = "";
+        f.style.height = "";
+      }
       article.style.minHeight = "";
+      const pageOf = (y: number) => Math.floor(y / pitch);
+      const limitOf = (k: number) => k * pitch + pageH - MARGIN;
+      const nextTopOf = (k: number) => (k + 1) * pitch + MARGIN;
+      /* The paragraph's lines, when its height is a whole number of them. */
+      const linesOf = (block: HTMLElement): { n: number; lh: number; p: HTMLElement } | null => {
+        const p = block.querySelector<HTMLElement>(":scope > p");
+        if (!p || !p.querySelector("[data-break-float]")) return null;
+        const lh = parseFloat(getComputedStyle(p).lineHeight);
+        if (!(lh > 0)) return null;
+        /* The fractional height: offsetHeight rounds, and the rounding outgrows the tolerance on a long paragraph. */
+        const ph = p.getBoundingClientRect().height;
+        const n = Math.round(ph / lh);
+        return n > 0 && Math.abs(n * lh - ph) < 0.5 ? { n, lh, p } : null;
+      };
+      /*
+        Keep f lines of the paragraph's segment that starts at top on its page; the rest start at the next page's
+        top margin. pair 0 breaks the paragraph's first segment; pair 1 breaks the segment after that break (the
+        closing block's pull from a paragraph that already spans a page, Oct 31 fix round).
+      */
+      const breakAt = (p: HTMLElement, lh: number, f: number, top: number, pair: 0 | 1 = 0) => {
+        const floats = Array.from(p.querySelectorAll<HTMLElement>(":scope > [data-break-float]"));
+        const [hold, gap] = floats.slice(pair * 2, pair * 2 + 2);
+        /* The hold float ends half a line into the first line that moves, so rounding never moves the line above it. */
+        const holdH = f * lh + lh / 2;
+        hold.style.display = "block";
+        hold.style.height = `${holdH}px`;
+        gap.style.display = "block";
+        gap.style.height = `${nextTopOf(pageOf(top)) - top - holdH}px`;
+      };
+      /* Where a segment of n lines at top that crosses its page's bottom margin breaks: the lines kept, or null. */
+      const splitLines = (top: number, n: number, lh: number): number | null => {
+        const fit = Math.floor((limitOf(pageOf(top)) - top + 0.5) / lh);
+        const f = n - fit < 2 ? n - 2 : fit;
+        return f >= 2 && n - f >= 2 ? f : null;
+      };
+      /* lines: measured before any break, since a broken paragraph is no longer a whole number of lines. */
+      type Para = { block: HTMLElement; spacer: HTMLElement; lines: { n: number; lh: number; p: HTMLElement }; tail: { top: number; n: number } | null; pairs: number };
+      /*
+        The closing block would stand alone on the next page: the paragraph above gives it its last two lines,
+        from its last segment on this page (its tail when it already spans a page, with four lines or more, while
+        a float pair is free), or moves with it when it is short and unbroken. False when it cannot.
+      */
+      const pull = (para: Para, k: number, h: number): boolean => {
+        const pl = para.lines;
+        const pt = para.block.offsetTop;
+        if (para.tail) {
+          if (para.pairs >= 2 || para.tail.n < 4 || pageOf(para.tail.top) !== k) return false;
+          breakAt(pl.p, pl.lh, para.tail.n - 2, para.tail.top, 1);
+          return true;
+        }
+        if (pageOf(pt) !== k) return false;
+        if (pl.n >= 4) {
+          breakAt(pl.p, pl.lh, pl.n - 2, pt);
+          return true;
+        }
+        if (para.block.offsetHeight + parseFloat(getComputedStyle(para.block).marginBottom) + h > room) return false;
+        para.spacer.style.height = `${nextTopOf(k) - pt}px`;
+        return true;
+      };
       let bottom = MARGIN;
+      /* The paragraph above the current block; tail: where its lines resume after its last break, and how many. */
+      let prevPara: Para | null = null;
       for (const s of spacers) {
         const block = s.nextElementSibling as HTMLElement | null;
         if (!block) continue;
         const top = block.offsetTop;
         const h = block.offsetHeight;
-        const k = Math.floor(top / pitch);
-        const limit = k * pitch + pageH - MARGIN;
-        if ((top + h > limit && h <= pageH - 2 * MARGIN) || top > limit) {
-          s.style.height = `${(k + 1) * pitch + MARGIN - top}px`;
+        const k = pageOf(top);
+        const limit = limitOf(k);
+        const lines = linesOf(block);
+        let tail: { top: number; n: number } | null = null;
+        let pairs = 0;
+        if (top + h > limit) {
+          const f = lines && top <= limit ? splitLines(top, lines.n, lines.lh) : null;
+          if (block.dataset.block === "signoff" && prevPara && pull(prevPara, k, h)) {
+            const moved = block.offsetTop;
+            if (moved + h > limitOf(pageOf(moved))) s.style.height = `${nextTopOf(pageOf(moved)) - moved}px`;
+          } else if (lines && f !== null) {
+            breakAt(lines.p, lines.lh, f, top);
+            tail = { top: nextTopOf(k), n: lines.n - f };
+            pairs = 1;
+            /* A tail longer than a page breaks once more (the second pair). */
+            const f2 = tail.n * lines.lh > room ? splitLines(tail.top, tail.n, lines.lh) : null;
+            if (f2 !== null) {
+              breakAt(lines.p, lines.lh, f2, tail.top, 1);
+              tail = { top: nextTopOf(pageOf(tail.top)), n: tail.n - f2 };
+              pairs = 2;
+            }
+          } else if (h <= room || top > limit) {
+            s.style.height = `${nextTopOf(k) - top}px`;
+          }
         }
-        bottom = block.offsetTop + h;
+        if (lines) prevPara = { block, spacer: s, lines, tail, pairs };
+        bottom = block.offsetTop + block.offsetHeight;
       }
       const n = Math.max(1, Math.floor((bottom + MARGIN - 1) / pitch) + 1);
       article.style.minHeight = `${n * pageH + (n - 1) * PAGE_GAP}px`;
@@ -302,7 +412,7 @@ function Sheet({
   /* An open overlay hangs below its note, or opens upward when it would run past the last page (Sidenotes.tsx). */
   useOverlayPlacement(articleRef, overlayBottom, fitFrame, openNote, viewerOpenKey);
 
-  const dateLine = today ? today.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : null;
+  const dateLine = letterDate(today);
 
   return (
     <div className="mt-8" data-sheet="annotated">
@@ -362,7 +472,12 @@ function Sheet({
             {actions}
           </div>
 
-          {paragraphs.map((p, i) => (
+          {parts.salutation ? (
+            <p className="mb-5 text-[18px] leading-[1.6]" data-letter-salutation="true">
+              {parts.salutation}
+            </p>
+          ) : null}
+          {body.map((p, i) => (
             <Fragment key={i}>
               <div data-page-spacer="true" />
               <SheetParagraph
@@ -378,38 +493,93 @@ function Sheet({
           ))}
 
           <div data-page-spacer="true" />
-          <SignOff askName={!paragraphs.some((p) => (p.sentences ?? []).some((s) => /\[[^\]\n]*name[^\]\n]*\]/i.test(s.text)))} />
+          <div className={parts.closing ? "" : "pt-3"} data-block="signoff" data-signature="true">
+            <SignOff closing={parts.closing} askName={askName(paragraphs)} text="text-[18px] leading-[1.6]" fill />
+          </div>
         </article>
       </div>
     </div>
   );
 }
 
+/* The date line at the letter's head: today, as "October 31, 2026". */
+function letterDate(today: Date | null): string | null {
+  return today ? today.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : null;
+}
+
+/* The name is asked once: when the letter already carries a name placeholder ("[Your name]"), the fields drop Name. */
+function askName(paragraphs: Paragraph[]): boolean {
+  return !paragraphs.some((p) => (p.sentences ?? []).some((s) => /\[[^\]\n]*name[^\]\n]*\]/i.test(s.text)));
+}
+
 /*
-  The closing block: the fields a letter is signed with, each a gold-wash
-  field marked "Fill in", so they cannot be mistaken for text the service
-  wrote. In print they are plain ruled lines. The name is asked once: when
-  the sign-off already carries a name placeholder ("[Your name]"), the block
-  drops its Name field.
+  The closing block: the closing word and the name the letter signs off with,
+  on lines of their own (N1), then the fields a letter is signed with, each a
+  gold-wash field marked "Fill in", so they cannot be mistaken for text the
+  service wrote. In print they are plain ruled lines. The sheet and the phone
+  letter share it (N8); the read-only first draft shows the closing lines only
+  (fields: false), its name as plain text (fill: false).
 */
-function SignOff({ askName }: { askName: boolean }) {
+function SignOff({
+  closing,
+  askName,
+  text,
+  fill,
+  fields = true,
+}: {
+  closing: LetterParts["closing"];
+  askName: boolean;
+  /* The paragraphs' type, so the closing lines read as the letter's own text. */
+  text: string;
+  /* The name placeholder as the gold-wash "Fill in" field (the final letter), or the bracket text (the draft). */
+  fill: boolean;
+  fields?: boolean;
+}) {
+  return (
+    <>
+      {closing ? (
+        <div className={text} data-letter-closing="true">
+          <p>{closing.word}</p>
+          {closing.name ? <p data-letter-name="true">{fill ? withFields(closing.name) : closing.name}</p> : null}
+        </div>
+      ) : null}
+      {fields ? <SignatureFields askName={askName} className={closing ? "mt-6" : ""} /> : null}
+    </>
+  );
+}
+
+function SignatureFields({ askName, className }: { askName: boolean; className: string }) {
   const SIGNATURE_FIELDS = askName ? ["Signature", "Name", "Member ID", "Date"] : ["Signature", "Member ID", "Date"];
   return (
-    <div className="pt-3" data-block="signoff" data-signature="true">
-      <ul className="grid grid-cols-2 items-end gap-x-8 gap-y-5">
-        {SIGNATURE_FIELDS.map((label) => (
-          <li key={label} className={!askName && label === "Signature" ? "col-span-2 max-w-[calc(50%-16px)]" : ""}>
-            <p className="text-[14px] leading-5 text-muted">{label}</p>
-            <span
-              className={`mt-1 flex ${label === "Signature" ? "h-12" : "h-9"} items-end border-b-2 border-gold bg-gold-wash px-2 pb-1 text-[14px] leading-5 font-semibold text-ink print:border-ink print:bg-transparent`}
-              data-fill-in={label}
-            >
-              <span className="print:invisible">Fill in</span>
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <ul className={["grid grid-cols-2 items-end gap-x-8 gap-y-5", className].filter(Boolean).join(" ")} data-signature-fields="true">
+      {SIGNATURE_FIELDS.map((label) => (
+        <li key={label} className={!askName && label === "Signature" ? "col-span-2 max-w-[calc(50%-16px)]" : ""}>
+          <p className="text-[14px] leading-5 text-muted">{label}</p>
+          <span
+            className={`mt-1 flex ${label === "Signature" ? "h-12" : "h-9"} items-end border-b-2 border-gold bg-gold-wash px-2 pb-1 text-[14px] leading-5 font-semibold text-ink print:border-ink print:bg-transparent`}
+            data-fill-in={label}
+          >
+            <span className="print:invisible">Fill in</span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/*
+  The page break inside a paragraph (N2): two pairs of floats at its start (the second pair for a second break,
+  when the closing block takes two lines from a paragraph that already spans a page), display: none until the
+  sheet's layout shows them and sets their heights; empty, out of the reading order, and never printed.
+*/
+function BreakFloats() {
+  return (
+    <>
+      <span aria-hidden="true" className="float-left hidden w-0" data-break-float="hold" data-print-hide="true" />
+      <span aria-hidden="true" className="float-left clear-left hidden w-full" data-break-float="gap" data-print-hide="true" />
+      <span aria-hidden="true" className="float-left clear-left hidden w-0" data-break-float="hold" data-print-hide="true" />
+      <span aria-hidden="true" className="float-left clear-left hidden w-full" data-break-float="gap" data-print-hide="true" />
+    </>
   );
 }
 
@@ -467,6 +637,7 @@ function SheetParagraph({
     <>
       <div className="mb-5" data-block={`p${index}`} data-paragraph={index}>
         <p className="text-[18px] leading-[1.6]">
+          <BreakFloats />
           {sentences.map((s, i) => {
             const struck = sentenceStruck(s);
             const note = noteFor(groups, s);
@@ -519,10 +690,15 @@ function SheetParagraph({
 }
 
 /*
-  The letter block: a bond sheet with a 1 px ink edge, To and Re, then the paragraphs.
-  The final letter on the phone and the read-only first draft share it, so
-  they read alike.
+  The letter block: a bond sheet with a 1 px ink edge, To and Re, the
+  salutation, the paragraphs, the closing word and the name. The final letter
+  on the phone and the read-only first draft share it, so they read alike. The
+  final letter is complete (Oct 31, N8): the date line at its top, as the
+  desktop sheet's, and the fields to sign with under the sign-off, in two
+  columns inside the frame's inset.
 */
+const FRAME_TEXT = "text-[18px] leading-[1.9] lg:text-[17px]";
+
 export function LetterFrame({
   to,
   re,
@@ -530,6 +706,7 @@ export function LetterFrame({
   label,
   kind,
   id,
+  today = null,
 }: {
   to: string;
   re: string;
@@ -537,7 +714,12 @@ export function LetterFrame({
   label: string;
   kind: "final" | "draft";
   id?: string;
+  /* The date line at the top (the final letter only). */
+  today?: Date | null;
 }) {
+  const parts = letterParts(paragraphs);
+  const final = kind === "final";
+  const dateLine = final ? letterDate(today) : null;
   return (
     <article
       id={id}
@@ -548,6 +730,11 @@ export function LetterFrame({
       /* Printing from a narrow window (or the browser's print layout, narrower than 1,024 px) prints this letter alone too. */
       data-print-sheet={kind === "final" ? "true" : undefined}
     >
+      {dateLine ? (
+        <p className="mb-4 text-[17px] leading-snug tabular-nums" data-letter-date="true">
+          {dateLine}
+        </p>
+      ) : null}
       <dl className="space-y-1 border-b border-hairline pb-4 text-[17px] leading-snug">
         <div className="flex gap-2">
           <dt className="shrink-0 font-bold">To:</dt>
@@ -559,9 +746,19 @@ export function LetterFrame({
         </div>
       </dl>
       <div className="mt-4 space-y-5">
-        {paragraphs.map((p, i) => (
+        {parts.salutation ? (
+          <p className={FRAME_TEXT} data-letter-salutation="true">
+            {parts.salutation}
+          </p>
+        ) : null}
+        {parts.paragraphs.map((p, i) => (
           <LetterParagraph key={i} sentences={p.sentences ?? []} index={i} />
         ))}
+        {parts.closing || final ? (
+          <div className={parts.closing ? "" : "pt-3"} data-signature={final ? "true" : undefined}>
+            <SignOff closing={parts.closing} askName={askName(paragraphs)} text={FRAME_TEXT} fill={final} fields={final} />
+          </div>
+        ) : null}
       </div>
     </article>
   );

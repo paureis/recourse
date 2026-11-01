@@ -18,7 +18,6 @@ export function DeadlineStamp({
   today,
   landed = false,
   className = "",
-  daysLeft,
   bottomText,
   small = false,
 }: {
@@ -26,14 +25,12 @@ export function DeadlineStamp({
   today: Date;
   landed?: boolean;
   className?: string;
-  /* The day count the API computed; when given it wins over today's math. */
-  daysLeft?: number | null;
   /* The foot line; CASE OPENED everywhere (one stamp, one foot line), before and after it lands. */
   bottomText?: string;
   /* The phone's top sheet during the run (section 17, K5): the same stamp scaled to 120 px wide (zoom 0.77). */
   small?: boolean;
 }) {
-  const days = deadlineIso ? (typeof daysLeft === "number" ? daysLeft : daysUntil(deadlineIso, today)) : null;
+  const days = deadlineIso ? daysUntil(deadlineIso, today) : null;
   const missing = deadlineIso === null || days === null;
   const dateText = missing ? "" : formatShortDate(deadlineIso);
   const countText = missing ? "" : dayCountLabel(days);
@@ -93,17 +90,15 @@ export function DeadlineStamp({
 export function DeadlineLine({
   deadlineIso,
   today,
-  daysLeft,
   size = "lead",
   className = "",
 }: {
   deadlineIso: string | null;
   today: Date;
-  daysLeft?: number | null;
   size?: "lead" | "line";
   className?: string;
 }) {
-  const days = deadlineIso ? (typeof daysLeft === "number" ? daysLeft : daysUntil(deadlineIso, today)) : null;
+  const days = deadlineIso ? daysUntil(deadlineIso, today) : null;
   const missing = deadlineIso === null || days === null;
   const lead = size === "lead";
   return (

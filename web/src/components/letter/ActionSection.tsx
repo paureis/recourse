@@ -15,7 +15,8 @@ export const APPEAL_LETTER_ID = "appeal-letter";
 function deadlineLine(letter: Letter, today: Date): string {
   const d = letter.deadline;
   if (d.source === "unknown" || typeof d.date !== "string" || d.date === "") return "Deadline not stated";
-  const days = typeof d.days_left === "number" ? d.days_left : daysUntil(d.date, today);
+  /* Always today's count from the date; the stored days_left is the count of the day the case was opened (Oct 31, N4). */
+  const days = daysUntil(d.date, today);
   const by = `Appeal by ${formatShortDate(d.date)}`;
   return days === null ? by : `${by}, ${dayCountLabel(days).toLowerCase()}`;
 }
@@ -93,7 +94,7 @@ export function ActionSection({
               letter={letter}
               caseId={caseId}
               desk={sheet}
-              today={sheet ? today : null}
+              today={today}
               deadlineLine={sheet ? deadlineLine(letter, today) : null}
             />
           </>

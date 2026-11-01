@@ -238,7 +238,7 @@ function PolicyExhibit({ citation, unsupported, settled }: { citation: CitationR
             pageOpen ? (
               <ExhibitPage highlight={h} title={title} id={viewerPanelId(viewKey)} />
             ) : (
-              <Crop highlight={h} title={title} drawn={drawn} onLoad={onCropLoad} onError={() => setImageFailed(true)} />
+              <Crop highlight={h} title={title} drawn={drawn} quiet={isSettled} onLoad={onCropLoad} onError={() => setImageFailed(true)} />
             )
           ) : viewer ? (
             <button
@@ -256,10 +256,10 @@ function PolicyExhibit({ citation, unsupported, settled }: { citation: CitationR
               className="flex min-h-11 w-full cursor-zoom-in items-center"
               data-exhibit-open="true"
             >
-              <Crop highlight={h} title={title} drawn={drawn} onLoad={onCropLoad} onError={() => setImageFailed(true)} />
+              <Crop highlight={h} title={title} drawn={drawn} quiet={isSettled} onLoad={onCropLoad} onError={() => setImageFailed(true)} />
             </button>
           ) : (
-            <Crop highlight={h} title={title} drawn={drawn} onLoad={onCropLoad} onError={() => setImageFailed(true)} />
+            <Crop highlight={h} title={title} drawn={drawn} quiet={isSettled} onLoad={onCropLoad} onError={() => setImageFailed(true)} />
           )}
         </div>
       </>
@@ -415,12 +415,19 @@ function Crop({
   highlight: h,
   title,
   drawn,
+  quiet,
   onLoad,
   onError,
 }: {
   highlight: PageHighlight;
   title: string;
   drawn: boolean;
+  /*
+    The landing's settled exhibit, rendered on the server: fetchPriority low keeps React from turning the img
+    into a preload in the page's Link header, which Vercel also sends on the route's prefetch responses, so every
+    case page and the intake warmed the image and logged it as an unused preload (Oct 31, N7).
+  */
+  quiet: boolean;
   onLoad: () => void;
   onError: () => void;
 }) {
@@ -444,6 +451,7 @@ function Crop({
         height={h.height_px}
         onLoad={onLoad}
         onError={onError}
+        fetchPriority={quiet ? "low" : undefined}
         draggable={false}
         className="absolute max-w-none"
         style={{ width: pct(h.width_px / cw), height: pct(h.height_px / ch), left: pct(-x0 / cw), top: pct(-y0 / ch) }}
