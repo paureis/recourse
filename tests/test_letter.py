@@ -352,3 +352,118 @@ def test_the_letter_spells_dates_out_like_the_re_line():
 
     out = verify_letter({"paragraphs": [{"sentences": [s("Claim number 2026-13-45 is on file.")]}]}, inv)
     assert out["paragraphs"][0]["sentences"][0]["text"] == "Claim number 2026-13-45 is on file."
+
+
+# ---- the letter's frame in the text export (Oct 31) -------------------------------------------
+# The web renders the salutation and the sign-off as lines of their own (letterParts in
+# web/src/lib/case.ts); the API's letter.txt must print the same text the web's copy does.
+
+
+def row(text, claim=False, verified=False, struck=False, citation=None):
+    return {"text": text, "claim": claim, "citation": citation, "verified": verified, "struck": struck, "reason": None}
+
+
+CITE = {"finding_id": "f1", "doc_id": "fl-04", "title": "Florida PDN Policy", "page": 5, "quote": "q"}
+
+
+def framed(first, last, struck_first=False, struck_last=False, claim_last=False):
+    return {
+        "applicable": True,
+        "to": "Sunshine Health",
+        "re": "Appeal",
+        "paragraphs": [
+            {"sentences": [row(first, struck=struck_first), row("Florida Medicaid covers up to 24 hours a day.", True, True, citation=CITE)]},
+            {"sentences": [row("Thank you for your review."), row(last, claim=claim_last, verified=claim_last, struck=struck_last, citation=CITE if claim_last else None)]},
+        ],
+    }
+
+
+def test_letter_text_puts_the_salutation_and_the_closing_on_lines_of_their_own():
+    import copy
+
+    L = framed("Dear Appeals Department, I am writing to appeal your denial.", "Sincerely, [Your name].")
+    before = copy.deepcopy(L)
+    assert letter_text(L) == (
+        "To: Sunshine Health\nRe: Appeal\n\n"
+        "Dear Appeals Department,\n\n"
+        "I am writing to appeal your denial. Florida Medicaid covers up to 24 hours a day. [cite: Florida PDN Policy, p. 5]\n\n"
+        "Thank you for your review.\n\n"
+        "Sincerely,\n[Your name]\n"
+    )
+    assert L == before  # the record is never edited
+
+
+def test_letter_text_without_a_salutation_or_a_closing_is_unchanged():
+    L = framed("I am writing to appeal your denial.", "Please call me with questions.")
+    assert letter_text(L) == (
+        "To: Sunshine Health\nRe: Appeal\n\n"
+        "I am writing to appeal your denial. Florida Medicaid covers up to 24 hours a day. [cite: Florida PDN Policy, p. 5]\n\n"
+        "Thank you for your review. Please call me with questions.\n"
+    )
+
+
+def test_letter_text_never_splits_a_struck_or_claim_sentence():
+    struck = letter_text(framed("Dear Appeals Department, I am writing.", "Sincerely, [Your name].", struck_first=True, struck_last=True))
+    assert "Dear Appeals Department" not in struck and "Sincerely" not in struck  # struck sentences stay out, unsplit
+    assert struck.endswith("Thank you for your review.\n")
+    claim = letter_text(framed("I am writing.", "The policy covers it. Sincerely, [Your name].", claim_last=True))
+    assert claim.endswith("Thank you for your review. The policy covers it. Sincerely, [Your name]. [cite: Florida PDN Policy, p. 5]\n")
+
+
+@pytest.mark.parametrize(
+    "first, salutation, rest",
+    [
+        ("Dear Appeals Department: I am writing to appeal your denial.", "Dear Appeals Department:", "I am writing to appeal your denial."),
+        ("To Whom It May Concern, I am writing to appeal your denial.", "To Whom It May Concern,", "I am writing to appeal your denial."),
+        ("Dear Sunshine Health appeals team,", "Dear Sunshine Health appeals team,", None),
+    ],
+)
+def test_letter_text_salutation_forms(first, salutation, rest):
+    txt = letter_text(framed(first, "Thank you."))
+    body = txt.split("\n\n")
+    assert body[1] == salutation
+    assert body[2].startswith(rest or "Florida Medicaid covers")
+
+
+@pytest.mark.parametrize(
+    "last, before, closing",
+    [
+        ("Sincerely, John Smith Jr.", None, "Sincerely,\nJohn Smith Jr."),
+        ("Sincerely, Ann B. Lee, J.", None, "Sincerely,\nAnn B. Lee, J."),
+        ("Respectfully submitted, Ann Lee.", None, "Respectfully submitted,\nAnn Lee"),
+        ("Best regards, Ann Lee", None, "Best regards,\nAnn Lee"),
+        ("Yours faithfully, [Your name].", None, "Yours faithfully,\n[Your name]"),
+        ("I look forward to your answer. Sincerely, [Your name].", "I look forward to your answer.", "Sincerely,\n[Your name]"),
+        ("Sincerely,", None, "Sincerely,"),
+    ],
+)
+def test_letter_text_closing_forms(last, before, closing):
+    txt = letter_text(framed("I am writing.", last))
+    assert txt.endswith(f"Thank you for your review.{' ' + before if before else ''}\n\n{closing}\n")
+
+
+def test_letter_text_leaves_out_an_unverified_claim_that_is_not_marked_struck():
+    claim = "The policy requires payment for every hour."
+    L = {"applicable": True, "to": "T", "re": "R", "paragraphs": [
+        {"sentences": [row("I am writing."), row(claim, claim=True, verified=False, struck=False, citation=CITE)]},
+        {"sentences": [row(claim, claim=True, verified=True, citation=CITE)]},
+    ]}
+    txt = letter_text(L)
+    assert txt == f"To: T\nRe: R\n\nI am writing.\n\n{claim} [cite: Florida PDN Policy, p. 5]\n"
+
+
+def test_letter_text_cites_the_doc_id_when_the_title_is_blank():
+    L = {"applicable": True, "to": "T", "re": "R", "paragraphs": [
+        {"sentences": [row("A rule.", True, True, citation={**CITE, "title": "   "})]},
+        {"sentences": [row("Another rule.", True, True, citation={**CITE, "title": "  Florida PDN Policy  "})]},
+    ]}
+    assert letter_text(L) == "To: T\nRe: R\n\nA rule. [cite: fl-04, p. 5]\n\nAnother rule. [cite: Florida PDN Policy, p. 5]\n"
+
+
+def test_letter_text_prints_no_block_for_a_paragraph_left_empty():
+    L = {"applicable": True, "to": "T", "re": "R", "paragraphs": [
+        {"sentences": [row("A.")]},
+        {"sentences": [row("   ")]},
+        {"sentences": [row("B.")]},
+    ]}
+    assert letter_text(L) == "To: T\nRe: R\n\nA.\n\nB.\n"

@@ -363,23 +363,79 @@ def verify_letter(letter: dict, investigation) -> dict:
     return {**letter, "paragraphs": paragraphs, "verification": {"claims": claims, "verified": verified, "struck": struck}}
 
 
+# The letter's frame (Oct 31): the model writes the salutation into the first sentence ("Dear Appeals
+# Department, I am writing ...") and the sign-off as the last ("Sincerely, [Your name]."). The web prints
+# them as lines of their own (letterParts and letterPlainText in web/src/lib/case.ts); letter_text does the
+# same so letter.txt matches the web's copy. Same patterns as the web's; only the export is split, never
+# the record, and a struck sentence (or, for the closing, a claim sentence) is never split.
+SALUTATION = re.compile(r"^\s*((?:Dear\s+[^,:.!?\n]{1,80}|To Whom It May Concern)[,:])\s*([\s\S]*)$")
+CLOSING = re.compile(r"^([\s\S]*?[.!?][\"”)]?\s+)?(Sincerely(?: yours)?|Respectfully(?: yours| submitted)?|(?:Best |Kind |Warm )?[Rr]egards|Yours (?:truly|sincerely|faithfully)),\s*([\s\S]*?)\s*$")
+
+
+def _struck(s: dict) -> bool:
+    return bool(s.get("struck")) or (bool(s.get("claim")) and not s.get("verified"))
+
+
+def _closing_name(raw: str) -> str:
+    """The name without the sentence's final period ("[Your name]." reads "[Your name]"); an initial or "Jr." keeps it."""
+    name = raw.strip()
+    if not name.endswith("."):
+        return name
+    if name.endswith("].") or not re.search(r"(?:^|\s)[A-Za-z]{1,2}\.$", name):
+        return name[:-1].rstrip()
+    return name
+
+
+def letter_frame(paragraphs: list) -> tuple[str | None, list, str | None]:
+    """(salutation, paragraphs without the salutation and the sign-off, closing lines) as copies; the input is untouched."""
+    out = [{"sentences": [dict(s) for s in (p.get("sentences") or [])]} for p in paragraphs or []]
+    salutation = closing = None
+    first = out[0]["sentences"][0] if out and out[0]["sentences"] else None
+    if first and not _struck(first):
+        m = SALUTATION.match(first.get("text") or "")
+        if m:
+            salutation = m.group(1)
+            rest = m.group(2).strip()
+            if rest:
+                first["text"] = rest
+            else:
+                out[0]["sentences"].pop(0)
+    last_p = out[-1]["sentences"] if out else []
+    last = last_p[-1] if last_p else None
+    if last and not _struck(last) and not last.get("claim"):
+        m = CLOSING.match(last.get("text") or "")
+        if m:
+            closing = "\n".join(x for x in (f"{m.group(2)},", _closing_name(m.group(3))) if x)
+            before = (m.group(1) or "").strip()
+            if before:
+                last["text"] = before
+            else:
+                last_p.pop()
+    return salutation, [p for p in out if p["sentences"]], closing
+
+
 def letter_text(letter: dict) -> str:
-    """Plain text for export: struck sentences removed, '[cite: title, p. N]' after each verified claim."""
+    """Plain text for export: the salutation and the sign-off on lines of their own, struck sentences removed, '[cite: title, p. N]' after each verified claim."""
     if not letter.get("applicable", True):
         raise ValueError("no appeal letter: the denial matches the policy")
-    lines = [f"To: {letter.get('to') or ''}", f"Re: {letter.get('re') or ''}", ""]
-    for p in letter.get("paragraphs") or []:
+    salutation, paragraphs, closing = letter_frame(letter.get("paragraphs") or [])
+    blocks = [salutation] if salutation else []
+    for p in paragraphs:
         parts = []
-        for s in p.get("sentences") or []:
-            if s.get("struck"):
+        for s in p["sentences"]:
+            if _struck(s):
                 continue
-            t = s["text"]
+            t = s["text"].strip()
             c = s.get("citation")
             if s.get("claim") and s.get("verified") and c:
-                t += f" [cite: {c.get('title') or c.get('doc_id')}, p. {c.get('page')}]"
+                t += f" [cite: {(c.get('title') or '').strip() or c.get('doc_id')}, p. {c.get('page')}]"
             parts.append(t)
-        if parts:
-            lines += [" ".join(parts), ""]
+        block = " ".join(parts)
+        if block:  # as the web: a paragraph left empty prints no block
+            blocks.append(block)
+    if closing:
+        blocks.append(closing)
+    lines = [f"To: {letter.get('to') or ''}", f"Re: {letter.get('re') or ''}", "", "\n\n".join(blocks)]
     return "\n".join(lines).rstrip() + "\n"
 
 
