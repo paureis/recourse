@@ -17,7 +17,7 @@ The clip is 126.6 s by ffprobe: 3,165 frames at 25 fps, last frame at 126.56 s. 
 | # | Time | Words, target | On-screen source | Edit actions |
 |---|---|---|---|---|
 | 1 | 0:00 to 0:20 | 47 words, 20 s | `seg1-letter-page-view.png`, held 20 s | Circle "limits private duty nursing to 8 hours per day" (x 517 to 857, y 552 to 572). Draw it on "Its reason". Text card from "Most people stop here" (row 1 note). |
-| 2 | 0:20 to 0:40 | 38 words, 20 s | Clip 0.4 to 3.6, 3.7 to 5.4, `seg2-pasted-letter-top-view.png`, clip 6.72 to 10.5, 14.96 to 19.36. Primary: recording day, film live (decision 1). | Cut the read wait 10.5 to 14.96. Holds on the landing, the pasted letter and the case card (row 2 note). No timer. |
+| 2 | 0:20 to 0:40 | 44 words, 20 s (since Nov 2: "Add the letter as a photo, or paste it, and click Read this letter.") | The Nov 2 take: the landing still, the photo clip (the file door, the thumbnail, "Reading your letter"), the paste desk, `seg2-pasted-letter-top-view.png`, the reading, the card, the scroll to Confirm; the piece table is under "Notes per row". The Oct 29 clip offsets (0.4 to 3.6, 3.7 to 5.4, 6.72 to 10.5, 14.96 to 19.36) are the OCT29 table's. | Cut the read wait 10.5 to 14.96. Holds on the landing, the pasted letter and the case card (row 2 note). No timer. |
 | 3 | 0:40 to 1:10 | 66 words, 30 s | Clip 20.9 to 24.9, 40.6 to 46.6, 58.2 to 61.2, 66.96 to 70.0, 91.9 to 93.2. Primary: recording day, film live (decision 1). | Elapsed timer overlay, zero at clip 19.3. Five segments, four cuts, frozen-timer holds. Ends on "reviewed 73.9 s" (section 3). |
 | 4 | 1:10 to 1:40 | 62 words, 30 s | `seg4-exhibit-pair-view.png` 14 s; clip 99.40 to 102.56 (3.2 s); `seg4-see-the-page-view.png` 12.8 s | The clip piece carries the click: the panel opens at 99.60 and the page draws at 100.00. Cut before 102.60, where the focus outline appears. Add a click marker on "See the page"; the headless clip has no cursor. |
 | 5 | 1:40 to 2:05 | 50 words, 25 s | `seg5-letter-sheet-view.png` 8.5 s; deadline shot 5.5 s (decision 3); `seg5-second-opinion-view.png` 11 s | Slow push-in to the second opinion line (x 138 to 445, y 310 to 326 in the still) on "Here, it agrees." |
@@ -31,15 +31,21 @@ Total: 381 words over 180 s (389 before the Nov 1 card change, 390 after it, 381
 
 Row 1. The still is a local rendering of dc-001's text (`seg1-letter-page.html`), not a site page, so the Oct 30 changes do not touch it. I measured the phrase's box in that HTML at 1280 by 800 (scrollY 0): x 517.1, y 551.7, 340.1 by 20 px. The text card reads "Denials are rarely appealed. 43 to 67% of appeals succeed. (KFF, 2025 data)" (script row 1). It goes in over the letter's lower half from "Most people stop here." The "SAMPLE LETTER FOR DEMONSTRATION" banner stays (shots problem 17).
 
-Row 2, from the clip, with holds, in program time:
+Row 2 as built Nov 2 (the NOV2 table in `video/backup.mjs`), in program time, cut to the row's new words (decided Nov 2: 44 words in 20 s, about 0.45 s a word). "Part 1" is the Nov 2 take's run clip; "photo" is the Nov 2 photo-intake clip (`video/take-2026-11-02.md`):
 
-| Program | Clip | Play | Hold | Spoken over it |
+| Program | Source | Play | Hold | Spoken over it |
 |---|---|---|---|---|
-| 0:20.0 to 0:25.0 | 0.4 to 3.6, the landing | 3.2 s | 1.8 s | "This is Recourse, a coverage denial appeal agent." |
-| 0:25.0 to 0:29.0 | 3.7 to 5.4, the desk; then `seg2-pasted-letter-top-view.png` | 1.7 s | 2.3 s on the still | "Paste the letter and click Read this letter." |
-| 0:29.0 to 0:32.8 | 6.72 to 10.5, "Reading your letter" ticking "Reading the letter, done" | 3.8 s | 0 | "Muse Spark reads it into a case card." |
-| 0:32.8 to 0:37.1 | 14.96 to 16.48, the case card | 1.5 s | 2.8 s on 16.48 | "Fix anything wrong," |
-| 0:37.1 to 0:40.0 | 16.48 to 19.36, the scroll to Confirm, cut on the click | 2.9 s | 0 | "then Confirm. Nothing runs until you say the card is right." |
+| 0:20.0 to 0:24.0 | `seg2-landing-view.png` (Nov 2) | 0 | 4.0 s | "This is Recourse, a coverage denial appeal agent." |
+| 0:24.0 to 0:27.2 | Photo 6.24 to 9.40: the desk, the click on "Choose a PDF or image" (a click ring 0:24.0 to 0:24.5), the thumbnail and "Reading your letter" from 7.28, "Reading the letter, done" at 9.24 | 3.2 s | 0 | "Add the letter as a photo," |
+| 0:27.2 to 0:28.4 | Photo 5.00 to 6.16, the empty desk before the click (part 1's desk at 6.44 to 7.60 showed a faint ghost of the landing's text in the box, a VP8 residue) | 1.2 s | 0 | "or paste it," |
+| 0:28.4 to 0:30.0 | `seg2-pasted-letter-top-view.png` (Nov 2, after Ctrl+Home) | 0 | 1.6 s | "and click Read this letter." |
+| 0:30.0 to 0:33.8 | Part 1 12.68 to 16.44, "Reading your letter" to "Finding the program, done" | 3.8 s | 0 | "Muse Spark reads it into a case card." |
+| 0:33.8 to 0:35.0 | Part 1 16.48 to 17.48, the case card (the Check row at the foot) | 1.04 s | 0.16 s | "Fix anything wrong," |
+| 0:35.0 to 0:40.0 | Part 1 22.84 to 25.68, after "Looks right": the scroll to Confirm (to 23.80), then still on Confirm; held on 25.68, the last frame before the click, to the cut | 2.88 s | 2.12 s | "then Confirm. Nothing runs until you say the card is right." |
+
+To fit the photo shot, the holds shrank (the landing 5.0 to 4.0 s, the pasted letter 2.3 to 1.6 s, the case card 2.8 to 0.16 s) and the paste desk went from 1.7 to 1.2 s of a still screen; the reading clip keeps its 3.8 s. The Confirm view, still from 23.80 in the clip, is held 2.12 s more so the cut to row 3 stays on the click.
+
+The Oct 29 build's row 2 (the OCT29 table, under the old words "Paste the letter and click Read this letter."): landing still 0:20.0 to 0:25.0; clip 3.7 to 5.4 then `seg2-pasted-letter-top-view.png` to 0:29.0; clip 6.72 to 10.5 to 0:32.8; clip 14.96 to 16.48 held to 0:37.1; clip 16.48 to 19.36 to 0:40.0. The notes below are about the Oct 29 clip.
 
 Clip 0.24 is a white frame and 0.32 is the first landing frame. The letter is pasted at 5.76 and "Read this letter" is pressed at 6.68. Clip 5.76 to 6.68 shows the end of the letter with the focus ring (problem 3), so the still replaces it (decision 4). The card arrives at 14.96. The page jumps there (layout shift 0.32, problem 16), and that jump is the cut point. The click lands between 19.36 and 19.40. Frame 19.40 is the first one after it.
 

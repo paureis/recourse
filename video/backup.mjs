@@ -33,6 +33,9 @@ const NOV2 = {
   // there on a bug in its own stamp check. Part 2: a free reload of c_6f3143 for shots 4 (the top) to 8.
   clip: SHOTS2 + "/clip-dc001-2026-11-02.webm",        // 78.16 s, 1,954 frames
   clip2: SHOTS2 + "/clip-dc001-2026-11-02-part2.webm", // 50.00 s, 1,250 frames
+  // Part 3, the photo intake (Nov 2, 2:16 pm ET): /case/new, "Choose a PDF or image", denial-letter.png (the dc-001
+  // page), "Reading your letter" to the case card. One intake read ($0.0107), no case opened. 17.80 s, 445 frames.
+  clip3: SHOTS2 + "/photo/clip-photo-2026-11-02.webm",
   // The click on Confirm falls between frames 25.68 (last Confirm view) and 25.72 (the confirmed card). 25.70 makes
   // the Trust-tick frame (77.12) read 51.42, the page's own Confirm-to-tick time; the first finding (40.48 -> 14.78,
   // page 14.80), Steelman (58.00 -> 32.30, page 32.30) and the stamp (62.76 -> 37.06, page 37.09) agree with it.
@@ -55,6 +58,8 @@ const NOV2 = {
     [62.76, 63.20, "the stamp lands with a layout jump (62.76), then the scroll to the very top (63.04 to 63.20): mid-scroll frames"],
     [0.00, 0.36, "page load: blank and first-paint frames (luma jumps at 0.28 and 0.32)", "clip2"],
     [16.24, 17.10, "the panel closes at 16.24 and focus goes back to the crop until the click on bond (no outline seen; kept out anyway)", "clip2"],
+    [0.00, 3.08, "page load: white frames until the first paint at 3.08", "clip3"],
+    [15.60, 15.68, "the case card arrives with a full-page jump (15.60 to 15.68); the photo piece ends long before", "clip3"],
   ],
   // Row 3: the five run segments. Play from `in`; the timer stops on the frame at `out` and holds there.
   // `extendTo` lets the picture run on under the stopped timer (not needed on Nov 2: the tick is drawn whole at 77.12).
@@ -66,14 +71,21 @@ const NOV2 = {
     { id: "E", in: 75.84, out: 77.12, to: 70.0, final: true }, // "Trust: Checking the letter against itself..." ticks at 77.12
   ],
   // Row 2, program 0:20 to 0:40. A clip piece with hold: true plays to the frame at clip[1] and holds it.
+  // Cut to script.md row 2 as decided Nov 2 (44 words in 20 s, 0.45 s a word): "...appeal agent." ends at 23.6,
+  // "Add the letter as a photo," 23.6 to 26.4, "or paste it, and click Read this letter." to 30.0, "Muse Spark reads it
+  // into a case card." to 33.6, "Fix anything wrong," to 35.0, "then Confirm. Nothing runs ..." to 40.0.
   row2: [
-    { still: "landing", to: 25.0 },
-    { clip: [6.44, 8.12], to: 26.7 },              // the desk, first frame 6.44 (the click on "Start with your letter")
-    { still: "pastedTop", to: 29.0 },
-    { clip: [12.68, 16.44], to: 32.8 },            // "Reading your letter": "Reading the letter, done" at 15.44, "Finding the program, done" at 16.44
-    { clip: [16.48, 18.00], hold: true, to: 37.1 }, // the case card arrives at 16.48; hold on 18.00 (the card, the Check row at the foot)
-    { clip: [22.84, 25.68], to: 40.0 },            // after "Looks right" (21.48): the scroll to Confirm, cut on the click (25.68 is the last frame before it)
+    { still: "landing", to: 24.0 },
+    { clip: [6.24, 9.40], src: "clip3", to: 27.2 }, // the photo: the desk, the click on "Choose a PDF or image" (6.76), the thumbnail and "Reading your letter" (7.28), "Reading the letter, done" (9.24)
+    { clip: [5.00, 6.16], src: "clip3", to: 28.4 }, // the empty desk from the photo clip, before its click (part 1's desk at 6.44 to 7.60 carried a VP8 ghost of the landing's text in the box)
+    { still: "pastedTop", to: 30.0 },
+    { clip: [12.68, 16.44], to: 33.8 },            // "Reading your letter": "Reading the letter, done" at 15.44, "Finding the program, done" at 16.44
+    { clip: [16.48, 17.48], hold: true, to: 35.0 }, // the case card arrives at 16.48
+    { clip: [22.84, 25.68], hold: true, to: 40.0 }, // after "Looks right" (21.48): the scroll to Confirm (22.72 to 23.80), still on Confirm to 25.68, the last frame before the click; held to the cut
   ],
+  // The headless clip has no cursor: a ring on "Choose a PDF or image" (its box x 756 to 1143, y 289 to 337; the click
+  // landed at 949, 313) from the piece's first frame to the frame the button shows pressed (clip 6.76, program 24.52).
+  row2Layers: [{ kind: "click", at: [949, 313], from: 24.0, until: 24.52, fade: 0.08 }],
   // Row 4, program 1:10 to 1:40. The clip piece carries the click: the panel opens at 11.24 ("Loading page 5"),
   // the page draws at 11.60, the highlight at 11.84; frames to 14.20 hold the open panel (it closes at 16.24).
   row4: [
@@ -168,7 +180,7 @@ const ROWS = [
       { kind: "ellipse", box: [517, 552, 857, 572], cue: "Its reason", fade: 0.3 },
       { kind: "card1", cue: "Most people stop here", fade: 0.4 },
     ] },
-  { n: 2, from: 20, to: 40, pieces: T.row2 },
+  { n: 2, from: 20, to: 40, pieces: T.row2, layers: T.row2Layers || [] },
   { n: 3, from: 40, to: 70, run: true },
   { n: 4, from: 70, to: 100, pieces: T.row4,
     // The headless clip has no cursor: a ring on Exhibit 2's crop (the take's row4Ring) from half a second before
@@ -489,8 +501,17 @@ function check() {
   add(84.2, "row4-panel-opening-clip-99.60");
   add(87.16, "row4-clip-last-frame-102.56");
   add(87.2, "row4-see-the-page");
-  add(25.0, "row2-desk-clip-3.72"); add(26.72, "row2-pasted-letter-still"); add(29.0, "row2-reading-clip-6.72");
-  add(32.8, "row2-case-card-clip-14.96"); add(37.12, "row2-scroll-clip-16.48"); add(lastF(40), "row2-last-clip-19.32");
+  // row 2: the first and last frame of every piece, named from the table (so a re-cut never leaves stale names)
+  {
+    let prev = ROWS[1].from;
+    ROWS[1].pieces.forEach((p, k) => {
+      const what = p.still ? "still-" + p.still : (p.src || "clip") + "-" + p.clip[0] + "-to-" + p.clip[1] + (p.hold ? "-hold" : "");
+      add(pf(prev) / FPS, "row2-piece" + (k + 1) + "-first-" + what);
+      add(lastF(pf(p.to) / FPS), "row2-piece" + (k + 1) + "-last-" + what);
+      prev = p.to;
+    });
+    for (const L of ROWS[1].layers || []) if (L.kind === "click") add(L.from + 0.2, "row2-click-ring");
+  }
   add(108.52, "row5-deadline-beat"); add(114.0, "row5-second-opinion-zoom-start"); add(lastF(125), "row5-zoom-end");
   for (const s of log.timer) if (s.extendTo) add(s.holdProgram[0] + (cf(s.extendTo) - cf(s.clipOut)) / FPS, "seg" + s.seg + "-extended-to-" + s.extendTo + "-timer-stopped");
   shots.sort((a, b) => a[0] - b[0]);

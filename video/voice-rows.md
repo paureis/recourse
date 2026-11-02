@@ -6,9 +6,9 @@ Generate each row as its own audio file, named row1 to row8. The row's span is t
 
 A denial letter arrives. The plan approved eight hours a day of home nursing for a nine-year-old and denied the other eight. Its reason: Florida Medicaid limits it to eight hours. Most people stop here. Denials are rarely appealed, yet forty-three to sixty-seven percent of appeals succeed.
 
-## row2  (0:20 to 0:40, 38 words)
+## row2  (0:20 to 0:40, 44 words)
 
-This is Recourse, a coverage denial appeal agent. Paste the letter and click Read this letter. Muse Spark reads it into a case card. Fix anything wrong, then Confirm. Nothing runs until you say the card is right.
+This is Recourse, a coverage denial appeal agent. Add the letter as a photo, or paste it, and click Read this letter. Muse Spark reads it into a case card. Fix anything wrong, then Confirm. Nothing runs until you say the card is right.
 
 ## row3  (0:40 to 1:10, 66 words)
 
@@ -34,4 +34,4 @@ We tested it on thirty reviewed denial letters, three times. The verdict was rig
 
 Recourse is live now, at recourse-murex dot vercel dot app. Paste your own letter, or open the sample case. The code is public on GitHub, at paureis slash recourse.
 
-Total words: 381
+Total words: 387
