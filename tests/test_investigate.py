@@ -987,7 +987,8 @@ def test_a_dual_route_asks_the_federal_column_in_medicare_terms_template_plan():
         f"What limits apply to {service} under Medicare for a member who is 65 or older, such as hours, visits, or amounts?",
         f"What conditions or prior authorization does Medicare require for {service}?",
         f"What exclusions apply to {service} under Medicare?",
-        "How does a member appeal an adverse benefit determination under Medicare: the appeal or grievance, the fair hearing, the deadline, and where to file?",
+        # E4 (Nov 1): Medicare has no fair hearing, lower case or not
+        "How does a member appeal an adverse benefit determination under Medicare: the appeal or grievance, the Medicare appeal levels (redetermination, reconsideration, hearing), the deadline, and where to file?",
         f"What do the Medicare rules say when {reason}?",
         f"Is there an exception under Medicare that covers {service} even though {reason}?",
     ]
@@ -1032,7 +1033,7 @@ def test_the_question_about_both_programs_is_asked_as_written_in_both_columns():
         # the governing "Florida Medicaid rules" is swapped; the rest is the letter's own fact and stays
         "What do Medicare Part B rules say about Florida Medicaid not paying the Medicare coinsurance for an office visit with an established patient and leaving the remaining balance as the patient's responsibility?",
         DC021_PLAN["questions"][3]["question"],  # QMB
-        "For Medicare Part B, what are the rules for an adverse benefit determination, grievance or appeal, and fair hearing, including the deadline and where to file?",
+        "For Medicare Part B, what are the rules for an adverse benefit determination, grievance or appeal, and the Medicare appeal levels (redetermination, reconsideration, hearing), including the deadline and where to file?",  # E4
     ]
 
 
@@ -1126,8 +1127,9 @@ PART_D_DUAL = dict(program="medicare_part_d", payer_name="Sunshine Health Medica
 
 @pytest.mark.parametrize("jurisdiction, card_over, planned, asked", [
     # a program word inside a term of that program's own vocabulary is not the governing program
+    # E3 (Nov 1): a governing Statewide Medicaid Managed Care program is Florida's program and is swapped too
     ("Federal", DC012_CARD, "Does the Statewide Medicaid Managed Care program cover home-delivered meals under Florida Medicaid Long-term Care?",
-     "Does the Statewide Medicaid Managed Care program cover home-delivered meals under Medicare?"),
+     "Does Medicare cover home-delivered meals under Medicare?"),
     ("Federal", DC012_CARD, "Does a Medicaid waiver cover home-delivered meals under Florida Medicaid?", "Does a Medicaid waiver cover home-delivered meals under Medicare?"),
     ("Federal", DC012_CARD, "Does FL Medicaid cover home-delivered meals?", "Does Medicare cover home-delivered meals?"),
     ("Florida", PART_D_DUAL, "Does Medicare Part D cover azelaic acid gel, as Medicare.gov describes it?", "Does Florida Medicaid cover azelaic acid gel, as Medicare.gov describes it?"),
@@ -1175,3 +1177,358 @@ def test_a_lower_case_quote_of_the_reason_is_never_rewritten():
     c = card(**{**DC012_CARD, "denial_reason": "Florida Medicaid does not cover meals."})
     q = PlannedQuestion("reason", "What do the rules say when florida medicaid does not cover meals?")
     assert question_for_jurisdiction(q, route_case(c), "Federal", c).question == "What do the Medicare rules say when florida medicaid does not cover meals?"
+
+
+# ---- Nov 1: the four dual wording edges left open on Oct 30 (E1 to E4) --------------------------
+
+
+def _ask(card_over, text, jurisdiction, topic="other"):
+    from policyqa.investigate import question_for_jurisdiction
+
+    c = card(**card_over)
+    r = route_case(c)
+    assert r.dual
+    q = PlannedQuestion(topic, text)
+    out = question_for_jurisdiction(q, r, jurisdiction, c)
+    return out, q
+
+
+def _as_planned(card_over, text, jurisdiction, topic="other"):
+    out, q = _ask(card_over, text, jurisdiction, topic)
+    return out is q
+
+
+MEDICARE_LEVELS = "the Medicare appeal levels (redetermination, reconsideration, hearing)"
+FLORIDA_LEVELS = "the plan appeal and the Medicaid Fair Hearing"
+ASSISTED_LIVING = {**DC012_CARD, "denial_reason": "Home-delivered meals are not covered by Florida Medicaid Long-term Care for members who live in assisted living."}
+COSMETIC_PART_D = {**PART_D_DUAL, "denial_reason": "This drug is not covered by Medicare Part D for cosmetic use."}
+
+
+def test_e1_a_reason_quoted_only_in_part_is_held_in_the_federal_column():
+    """E1: the planner quotes part of the reason (not "Home-delivered"); the Florida program inside the quote stays."""
+    text = "Under Florida Medicaid Long-term Care, what do the rules say when meals are not covered by Florida Medicaid Long-term Care for members who live in assisted living?"
+    fed, q = _ask(ASSISTED_LIVING, text, "Federal")
+    assert fed.question == "Under Medicare, what do the rules say when meals are not covered by Florida Medicaid Long-term Care for members who live in assisted living?"
+    assert _as_planned(ASSISTED_LIVING, text, "Florida")
+
+
+def test_e1_a_partial_reason_naming_medicare_is_held_in_the_florida_column():
+    text = "What does Medicare Part D say when a drug is not covered by Medicare Part D for cosmetic use?"
+    flo, q = _ask(COSMETIC_PART_D, text, "Florida")
+    assert flo.question == "What does Florida Medicaid say when a drug is not covered by Medicare Part D for cosmetic use?"
+    assert _as_planned(COSMETIC_PART_D, text, "Federal")
+
+
+@pytest.mark.parametrize("reason, text, asked", [
+    # three words of the reason: a program phrase, not a quote
+    ("Widget therapy is not covered under Florida Medicaid.", "Is widget therapy excluded under Florida Medicaid?", "Is widget therapy excluded under Medicare?"),
+    # seven words of the reason, every one a program word or a stop word
+    ("Widget therapy is not covered under the Florida Medicaid Long-term Care program.", "Is widget therapy excluded under the Florida Medicaid Long-term Care program?",
+     "Is widget therapy excluded under Medicare?"),
+    # four words, one of them neither: below the bar
+    ("Widget therapy is limited under the Florida Medicaid rules.", "Is widget therapy excluded under the Florida Medicaid rules?", "Is widget therapy excluded under the Medicare rules?"),
+    # a run never crosses punctuation: "under Florida Medicaid, widget rules" is not the reason's "under Florida Medicaid widget rules"
+    ("Widget therapy is not covered under Florida Medicaid widget rules.",
+     "Under Florida Medicaid Long-term Care, is widget therapy not covered under Florida Medicaid, widget rules aside?",
+     "Under Medicare, is widget therapy not covered under Medicare, widget rules aside?"),
+])
+def test_e1_a_run_of_program_and_stop_words_is_not_held(reason, text, asked):
+    assert _ask({**DC012_CARD, "denial_reason": reason}, text, "Federal")[0].question == asked
+
+
+DUAL_B = dict(program="medicare_b", payer_name="Sunshine Health Medicare-Medicaid Plan", member_age_group="65_plus", service="Office visit, established patient",
+              service_code="99214", amount_billed=135.3)
+
+
+@pytest.mark.parametrize("card_over, jurisdiction, text, asked", [
+    # Nov 1 fix round: a program phrase at either edge of a run (with the stop words joining it) is the question's own
+    # frame, not the quote; it is trimmed off before the 4/2 bar, so the governing program is still swapped
+    ({**DC012_CARD, "denial_reason": "Home-delivered meals are not a covered benefit under Florida Medicaid."}, "Federal",
+     "Are home-delivered meals a covered benefit under Florida Medicaid?", "Are home-delivered meals a covered benefit under Medicare?"),
+    ({**PART_D_DUAL, "denial_reason": "Azelaic acid gel is not a covered benefit of Medicare Part D."}, "Florida",
+     "Is azelaic acid gel a covered benefit of Medicare Part D?", "Is azelaic acid gel a covered benefit of Florida Medicaid?"),
+    # Part letters are program words: "covered by Medicare Part B" is one own word and a program phrase
+    ({**DUAL_B, "denial_reason": "This office visit is not covered by Medicare Part B."}, "Florida",
+     "Is an office visit covered by Medicare Part B?", "Is an office visit covered by Florida Medicaid?"),
+    ({**PART_D_DUAL, "denial_reason": "The drug is excluded under Medicare Part B or Part D."}, "Florida",
+     "Is the drug covered under Medicare Part B or Part D?", "Is the drug covered under Florida Medicaid?"),
+    # a comma inside the reason breaks a run as one in the question does
+    ({**DC012_CARD, "denial_reason": "Not covered by Florida Medicaid, widget rules apply to adults."}, "Federal",
+     "Under Florida Medicaid Long-term Care, is widget therapy not covered by Florida Medicaid widget rules for adults?",
+     "Under Medicare, is widget therapy not covered by Medicare widget rules for adults?"),
+    # the trim on each edge, with another program phrase in the question (so the last-program rule does not decide it)
+    ({**DC012_CARD, "denial_reason": "Home-delivered meals are not a covered benefit under Florida Medicaid."}, "Federal",
+     "Under Florida Medicaid Long-term Care, are home-delivered meals a covered benefit under Florida Medicaid?",
+     "Under Medicare, are home-delivered meals a covered benefit under Medicare?"),
+    ({**DC012_CARD, "denial_reason": "Under Florida Medicaid widget therapy is covered only for children."}, "Federal",
+     "What does Florida Medicaid say about whether under Florida Medicaid widget therapy is covered for adults?",
+     "What does Medicare say about whether under Medicare widget therapy is covered for adults?"),
+    # four words of the reason with one own word are not a quote: "the rules" stays the column's slot
+    ({**DC012_CARD, "denial_reason": "We applied the rules for this."}, "Federal", "What do the rules for this say?", "What do the Medicare rules for this say?"),
+    # three words with a program strictly inside: below QUOTE_MIN_WORDS, so not a quote
+    ({**PART_D_DUAL, "denial_reason": "Unpaid Medicare claims are not paid again."}, "Florida",
+     "Are unpaid Medicare claims for azelaic acid gel covered?", "Are unpaid Florida Medicaid claims for azelaic acid gel covered?"),
+])
+def test_e1_the_question_frame_around_a_quote_is_not_held(card_over, jurisdiction, text, asked):
+    assert _ask(card_over, text, jurisdiction)[0].question == asked
+
+
+@pytest.mark.parametrize("card_over, text, asked", [
+    # a quote never takes the question's last program phrase: then the run is the planner's paraphrase, not a quote
+    ({**DC012_CARD, "denial_reason": "Meals are not covered under Florida Medicaid Long-term Care rules for members in assisted living."},
+     "Are meals covered under Florida Medicaid Long-term Care rules for members in assisted living?", "Are meals covered under Medicare rules for members in assisted living?"),
+    ({**DC012_CARD, "denial_reason": "Meals are not covered by Florida Medicaid for adults over 65."},
+     "Are meals covered by Florida Medicaid for adults over 65?", "Are meals covered by Medicare for adults over 65?"),
+    # the trim never cuts into a program's own vocabulary: "Medicare coinsurance" stays a mention
+    (DC021_CARD, "Under Florida Medicaid, what applies when the Medicare coinsurance for this visit so the remaining balance is owed?",
+     "Under Medicare Part B, what applies when the Medicare coinsurance for this visit so the remaining balance is owed?"),
+])
+def test_e1_a_quote_never_takes_the_governing_program_or_splits_a_mention(card_over, text, asked):
+    assert _ask(card_over, text, "Federal")[0].question == asked
+
+
+def test_e1_exactly_four_words_with_two_own_words_and_the_program_inside_are_held():
+    """QUOTE_MIN_WORDS 4 and QUOTE_MIN_OWN_WORDS 2 exactly: "paid by Medicare first" is the letter's own wording."""
+    c = {**PART_D_DUAL, "denial_reason": "The drug must be paid by Medicare first."}
+    assert _ask(c, "Does Medicare Part D require that it is paid by Medicare first?", "Florida")[0].question == "Does Florida Medicaid require that it is paid by Medicare first?"
+
+
+def test_e1_runs_after_the_qmb_check_so_a_quoted_reason_never_hides_a_qmb_question():
+    c = {**DC021_CARD, "denial_reason": "The member is a Qualified Medicare Beneficiary and Florida Medicaid did not pay."}
+    text = "For Florida Medicaid, can the provider bill a Qualified Medicare Beneficiary and Florida Medicaid did not pay?"
+    assert _as_planned(c, text, "Florida") and _as_planned(c, text, "Federal")
+
+
+def test_e1_two_held_runs_both_restore():
+    c = {**DC012_CARD, "denial_reason": "Meals are not covered by Florida Medicaid Long-term Care for members in assisted living, and nurses paid by Medicare did not document a need."}
+    text = ("Under Florida Medicaid, are meals covered by Florida Medicaid Long-term Care for members in assisted living when nurses paid by Medicare did not "
+            "document a need?")
+    assert _ask(c, text, "Federal")[0].question == ("Under Medicare, are meals covered by Florida Medicaid Long-term Care for members in assisted living when nurses paid "
+                                                    "by Medicare did not document a need?")
+
+
+
+
+@pytest.mark.parametrize("planned, asked", [
+    ("What is the Medicare Part B appeal process, including the Medicare appeal levels (redetermination, reconsideration, hearing) and the deadline to file?",
+     f"What is the Florida Medicaid appeal process, including {FLORIDA_LEVELS} and the deadline to file?"),
+    ("How does a member request a Medicare redetermination for an office visit under Medicare Part B?",
+     f"How does a member request {FLORIDA_LEVELS} for an office visit under Florida Medicaid?"),
+    ("For Medicare Part B, what are the deadlines for redetermination and reconsideration after an office visit denial?",
+     f"For Florida Medicaid, what are the deadlines for {FLORIDA_LEVELS} after an office visit denial?"),
+    ("For Medicare Part B, how does a member ask for a redetermination, a reconsideration, and an ALJ hearing?",
+     f"For Florida Medicaid, how does a member ask for {FLORIDA_LEVELS}?"),
+    ("Under Medicare Part B, what is the deadline for a Medicare Part B redetermination?", f"Under Florida Medicaid, what is the deadline for {FLORIDA_LEVELS}?"),
+    # a "hearing" in the list is an appeal level, never the start of "hearing aids" or "hearing loss testing"
+    ("Under Medicare Part B, are a Medicare redetermination and hearing aids covered?", f"Under Florida Medicaid, are {FLORIDA_LEVELS} and hearing aids covered?"),
+    ("Under Medicare Part B, does a Medicare redetermination and hearing loss testing apply?", f"Under Florida Medicaid, does {FLORIDA_LEVELS} and hearing loss testing apply?"),
+    # the whole list after "Medicare" goes, once
+    ("Under Medicare Part B, how does a member ask for a Medicare redetermination, reconsideration and hearing?", f"Under Florida Medicaid, how does a member ask for {FLORIDA_LEVELS}?"),
+])
+def test_e2_medicare_appeal_levels_become_florida_medicaid_appeal_terms_in_the_florida_column(planned, asked):
+    assert _ask(DC021_CARD, planned, "Florida", "appeal")[0].question == asked
+
+
+@pytest.mark.parametrize("planned, asked", [
+    # Florida Medicaid's own word for an eligibility renewal or a reassessment: never swapped
+    ("Does Medicare Part B cover an office visit while the member's annual redetermination is pending?",
+     "Does Florida Medicaid cover an office visit while the member's annual redetermination is pending?"),
+    ("Does Medicare Part B cover an office visit after a missed eligibility redetermination?", "Does Florida Medicaid cover an office visit after a missed eligibility redetermination?"),
+    ("Does Medicare Part B require a level of care redetermination before an office visit?", "Does Florida Medicaid require a level of care redetermination before an office visit?"),
+    ("Does Medicare Part B require a redetermination of medical necessity for an office visit?", "Does Florida Medicaid require a redetermination of medical necessity for an office visit?"),
+    ("Under Medicare Part B, does an eligibility redetermination and reconsideration affect an office visit?",
+     "Under Florida Medicaid, does an eligibility redetermination and reconsideration affect an office visit?"),
+    ("Under Medicare Part B, does a redetermination and reconsideration of eligibility affect an office visit?",
+     "Under Florida Medicaid, does a redetermination and reconsideration of eligibility affect an office visit?"),
+    # a bare "a redetermination" is not swapped: it can be an eligibility redetermination (the counter-example)
+    ("Under Medicare Part B, may the member request a redetermination after a change in income?", "Under Florida Medicaid, may the member request a redetermination after a change in income?"),
+    # Nov 1 fix round: an eligibility word anywhere earlier in the sentence blocks the swap, across commas
+    ("Does the member's Medicaid eligibility need a renewal, a redetermination, or a reconsideration?",
+     "Does the member's Medicaid eligibility need a renewal, a redetermination, or a reconsideration?"),
+    # "for medical necessity" after the level blocks it (the after guard, reached with nothing before)
+    ("Under Medicare Part B, how does a member request a Medicare redetermination for medical necessity of an office visit?",
+     "Under Florida Medicaid, how does a member request a Medicare redetermination for medical necessity of an office visit?"),
+])
+def test_e2_an_eligibility_redetermination_is_never_swapped(planned, asked):
+    assert _ask(DC021_CARD, planned, "Florida", "appeal")[0].question == asked
+
+
+def test_e2_an_eligibility_word_far_earlier_in_the_sentence_blocks_the_swap():
+    text = ("After the level of care assessment by the CARES unit, is a redetermination and reconsideration needed for home-delivered meals under "
+            "Florida Medicaid Long-term Care?")
+    assert _as_planned(DC012_CARD, text, "Florida", "appeal")
+
+
+@pytest.mark.parametrize("card_over, topic, planned, asked", [
+    # Nov 1 fix round: E2 applies only to an appeal question; elsewhere Medicare's appeal word is the letter's fact
+    (DC021_CARD, "conditions", "For Medicare Part B, what are the deadlines for redetermination and reconsideration after an office visit denial?",
+     "For Florida Medicaid, what are the deadlines for redetermination and reconsideration after an office visit denial?"),
+    (DC021_CARD, "other", "Does Florida Medicaid pay the coinsurance after a Medicare redetermination upholds the denial?", None),
+    (DC012_CARD, "coverage", "Does Florida Medicaid Long-term Care cover home-delivered meals while a Medicare reconsideration is pending?", None),
+    # an appeal question in which both programs act is asked as written, as before Nov 1
+    (DC021_CARD, "appeal", "How does a member appeal when Florida Medicaid refuses the coinsurance after a Medicare redetermination upholds the denial?", None),
+    (DC012_CARD, "appeal", "What is the Florida Medicaid Long-term Care appeal process, including a Medicare redetermination and where to file?", None),
+])
+def test_e2_applies_only_to_an_appeal_question_naming_one_program(card_over, topic, planned, asked):
+    out, q = _ask(card_over, planned, "Florida", topic)
+    if asked is None:
+        assert out is q
+    else:
+        assert out.question == asked
+
+
+def test_e2_the_federal_column_keeps_medicare_appeal_levels():
+    text = "How does a member request a Medicare redetermination for an office visit under Medicare Part B?"
+    out, q = _ask(DC021_CARD, text, "Federal", "appeal")
+    assert out is q
+
+
+@pytest.mark.parametrize("planned, asked", [
+    ("Does the Statewide Medicaid Managed Care (SMMC) program cover home-delivered meals?", "Does Medicare cover home-delivered meals?"),
+    ("Are home-delivered meals covered under Statewide Medicaid Managed Care?", "Are home-delivered meals covered under Medicare?"),
+    ("Is there an exception under Statewide Medicaid Managed Care (SMMC) that covers home-delivered meals?", "Is there an exception under Medicare that covers home-delivered meals?"),
+    ("Are home-delivered meals covered by the Statewide Medicaid Managed Care plan?", "Are home-delivered meals covered by Medicare?"),
+    # mentions are held as before
+    ("Does an SMMC plan cover home-delivered meals under Florida Medicaid Long-term Care?", "Does an SMMC plan cover home-delivered meals under Medicare?"),
+    ("What does the Statewide Medicaid Managed Care contract say about home-delivered meals under Florida Medicaid Long-term Care?",
+     "What does the Statewide Medicaid Managed Care contract say about home-delivered meals under Medicare?"),
+    ("Is a member with Statewide Medicaid Managed Care covered for home-delivered meals under Florida Medicaid?",
+     "Is a member with Statewide Medicaid Managed Care covered for home-delivered meals under Medicare?"),
+    # Nov 1 fix round: enrollment in SMMC is the member's fact, and SMMC before a Florida program name is that program's own name
+    ("For a member enrolled in Statewide Medicaid Managed Care, does Florida Medicaid Long-term Care cover home-delivered meals?",
+     "For a member enrolled in Statewide Medicaid Managed Care, does Medicare cover home-delivered meals?"),
+    ("Is a member of Statewide Medicaid Managed Care covered for home-delivered meals under Florida Medicaid?",
+     "Is a member of Statewide Medicaid Managed Care covered for home-delivered meals under Medicare?"),
+    ("Is a member in Statewide Medicaid Managed Care (SMMC) covered for home-delivered meals under Florida Medicaid?",
+     "Is a member in Statewide Medicaid Managed Care (SMMC) covered for home-delivered meals under Medicare?"),
+    ("Does the Statewide Medicaid Managed Care Long-term Care program cover home-delivered meals?",
+     "Does the Statewide Medicaid Managed Care Long-term Care program cover home-delivered meals under Medicare?"),
+])
+def test_e3_a_governing_statewide_medicaid_managed_care_is_swapped_in_the_federal_column(planned, asked):
+    assert _ask(DC012_CARD, planned, "Federal")[0].question == asked
+
+
+def test_e3_statewide_medicaid_managed_care_stays_in_the_florida_column():
+    text = "Does the Statewide Medicaid Managed Care program cover home-delivered meals under Florida Medicaid Long-term Care?"
+    out, q = _ask(DC012_CARD, text, "Florida")
+    assert out is q
+    # a Medicare-route letter: the governing Medicare is swapped as before, the SMMC phrase stays
+    out, _ = _ask(PART_D_DUAL, "Does the Statewide Medicaid Managed Care program cover azelaic acid gel under Medicare Part D?", "Florida")
+    assert out.question == "Does the Statewide Medicaid Managed Care program cover azelaic acid gel under Florida Medicaid?"
+
+
+@pytest.mark.parametrize("hearing", ["the fair hearing", "a fair hearing", "fair hearings", "the Fair Hearing", "the state fair hearing", "a State Fair Hearing", "Florida Medicaid's fair hearing",
+                                     "the fair-hearing", "your fair hearing"])
+def test_e4_a_fair_hearing_without_medicaid_becomes_the_medicare_appeal_levels_in_the_federal_column(hearing):
+    text = f"What is the appeal process for Florida Medicaid Long-term Care, including the grievance or appeal, {hearing}, and where to file?"
+    fed, q = _ask(DC012_CARD, text, "Federal", "appeal")
+    assert fed.question == f"What is the appeal process for Medicare, including the grievance or appeal, {MEDICARE_LEVELS}, and where to file?"
+    assert _as_planned(DC012_CARD, text, "Florida", "appeal")  # the Florida column keeps its fair hearing
+
+
+@pytest.mark.parametrize("planned, asked", [
+    # Nov 1 fix round. A fair hearing qualified by another word is left as written: Medicare's, or an adjective after the article
+    ("Is there a Medicare fair hearing for home-delivered meals?", None),
+    ("Can the member ask Florida Medicaid for an independent fair hearing?", "Can the member ask Medicare for an independent fair hearing?"),
+    # "fair hearing" before a noun is a modifier: it becomes "Medicare appeal", the article and the noun kept
+    ("What does a fair hearing officer decide under Florida Medicaid Long-term Care?", "What does a Medicare appeal officer decide under Medicare?"),
+    ("What is the fair-hearing deadline under Florida Medicaid?", "What is the Medicare appeal deadline under Medicare?"),
+    ("Under Florida Medicaid, what is the deadline for a fair hearing request?", "Under Medicare, what is the deadline for a Medicare appeal request?"),
+    # before a function word it is the plain noun
+    ("Under Florida Medicaid, is a fair hearing within 120 days required?", f"Under Medicare, is {MEDICARE_LEVELS} within 120 days required?"),
+    # both programs act: asked as written, as before Nov 1
+    ("Does Florida Medicaid's fair hearing apply when Medicare denies home-delivered meals?", None),
+])
+def test_e4_only_a_plain_fair_hearing_becomes_the_medicare_appeal_levels(planned, asked):
+    out, q = _ask(DC012_CARD, planned, "Federal", "appeal")
+    if asked is None:
+        assert out is q
+    else:
+        assert out.question == asked
+
+
+def test_e4_the_florida_column_of_a_medicare_letter_keeps_the_fair_hearing():
+    out, _ = _ask(DC021_CARD, "For Medicare Part B, how does a member request a fair hearing?", "Florida", "appeal")
+    assert out.question == "For Florida Medicaid, how does a member request a fair hearing?"
+
+
+def test_e4_the_live_dc012_appeal_question_c_a3435e():
+    """The deployed record c_a3435e (Oct 30): the Federal appeal question kept "the fair hearing"."""
+    card_over = {**DC012_CARD, "service": "home-delivered meals, 1 meal per day", "denial_reason": "Home-delivered meals are not a covered benefit of the Long-term Care program."}
+    planned = "What is the appeal process for the Florida Medicaid Long-term Care program, including the adverse benefit determination, the grievance or appeal, the fair hearing, the December 7, 2026 deadline, and where to file?"
+    fed, q = _ask(card_over, planned, "Federal", "appeal")
+    assert fed.question == f"What is the appeal process for Medicare, including the adverse benefit determination, the grievance or appeal, {MEDICARE_LEVELS}, the December 7, 2026 deadline, and where to file?"
+    assert _as_planned(card_over, planned, "Florida", "appeal")
+
+
+def test_a_qmb_question_is_still_asked_as_written_with_the_new_terms_in_it():
+    text = ("May a provider bill a Qualified Medicare Beneficiary (QMB) member for Medicare cost-sharing for home-delivered meals, and how does the member ask for "
+            "a fair hearing or a Medicare redetermination under Statewide Medicaid Managed Care?")
+    for j in ("Florida", "Federal"):
+        out, q = _ask(DC012_CARD, text, j, "other")
+        assert out is q
+
+
+def test_e2_applies_in_the_florida_column_of_a_florida_letter_too():
+    out, _ = _ask(DC012_CARD, "How does a member request a Medicare redetermination and where is it filed?", "Florida", "appeal")
+    assert out.question == f"How does a member request {FLORIDA_LEVELS} and where is it filed under Florida Medicaid Long-term Care?"
+
+
+# ---- Nov 1, second fix round ---------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("card_over, jurisdiction, text, asked", [
+    # the recorded dc-012 wording: the quote ends on "of the", which is the program phrase's article, not the quote's
+    (DC012_CARD, "Federal", "Even though the denial letter says home-delivered meals are not a covered benefit of the Florida Medicaid Long-term Care program, is there an exception?",
+     "Even though the denial letter says home-delivered meals are not a covered benefit of Medicare, is there an exception?"),
+    ({**DUAL_B, "denial_reason": "This service is not a covered benefit of the Part B program."}, "Florida",
+     "Is an office visit not a covered benefit of the Medicare Part B program?", "Is an office visit not a covered benefit of Florida Medicaid?"),
+    # stop words at the left edge are trimmed too: "the unpaid Medicare claims" is three words of the reason, not a quote
+    ({**PART_D_DUAL, "denial_reason": "The unpaid Medicare claims are final."}, "Florida",
+     "Are the unpaid Medicare claims for azelaic acid gel covered by Medicare Part D?", "Are the unpaid Florida Medicaid claims for azelaic acid gel covered by Florida Medicaid?"),
+])
+def test_e1_stop_words_at_either_edge_are_never_part_of_the_quote(card_over, jurisdiction, text, asked):
+    assert _ask(card_over, text, jurisdiction)[0].question == asked
+
+
+def test_e1_a_mention_left_after_the_quote_is_not_a_program():
+    """The last-program rule ignores mentions: "has Medicare" names no program the column could ask under."""
+    c = {**DC012_CARD, "denial_reason": "Meals are not covered by Florida Medicaid Long-term Care for members who live in assisted living."}
+    text = "Are meals not covered by Florida Medicaid Long-term Care for members who live in assisted living when the member has Medicare?"
+    assert _ask(c, text, "Federal")[0].question == "Are meals not covered by Medicare for members who live in assisted living when the member has Medicare?"
+
+
+def test_both_programs_named_only_inside_medicaid_or_medicare_is_not_a_both_programs_question():
+    text = "Under Florida Medicaid or Medicare, does Florida Medicaid cover home-delivered meals when Medicare pays first?"
+    assert _ask(DC012_CARD, text, "Federal")[0].question == "Under Medicare, does Medicare cover home-delivered meals when Medicare pays first?"
+
+
+@pytest.mark.parametrize("card_over, text", [
+    # the eligibility word sits inside the card's reason, held whole while the rewrite runs
+    ({**DUAL_B, "denial_reason": "Your annual eligibility review is overdue."},
+     "Because your annual eligibility review is overdue, how does the member request a redetermination and reconsideration?"),
+    # inside a quote held by E1
+    ({**DUAL_B, "denial_reason": "The claim was denied because your annual eligibility review was not completed in time."},
+     "Since your annual eligibility review was not completed, how does the member ask for a redetermination and reconsideration?"),
+])
+def test_e2_the_eligibility_guard_reads_held_text_too(card_over, text):
+    # the levels stay as written; the question names no program, so the column's is added as before Nov 1
+    assert _ask(card_over, text, "Florida", "appeal")[0].question == text[:-1] + " under Florida Medicaid?"
+
+
+@pytest.mark.parametrize("planned, asked", [
+    # the guard reads only the level's own sentence; a semicolon ends one
+    ("The member's eligibility is not in question. How does the member request a Medicare redetermination under Medicare Part B?",
+     f"The member's eligibility is not in question. How does the member request {FLORIDA_LEVELS} under Florida Medicaid?"),
+    ("The member's eligibility is settled; how does the member request a Medicare redetermination under Medicare Part B?",
+     f"The member's eligibility is settled; how does the member request {FLORIDA_LEVELS} under Florida Medicaid?"),
+    # "hearing before an ALJ" goes with the list, no Medicare leftover
+    ("Under Medicare Part B, how does a member ask for a Medicare redetermination, reconsideration, and hearing before an ALJ?",
+     f"Under Florida Medicaid, how does a member ask for {FLORIDA_LEVELS}?"),
+])
+def test_e2_the_guard_reads_one_sentence_and_the_list_takes_an_alj_hearing(planned, asked):
+    assert _ask(DC021_CARD, planned, "Florida", "appeal")[0].question == asked
+
+
+def test_e4_florida_medicaids_fair_hearing_as_a_modifier_keeps_an_article():
+    assert _ask(DC012_CARD, "What is Florida Medicaid's fair hearing deadline?", "Federal", "appeal")[0].question == "What is the Medicare appeal deadline under Medicare?"

@@ -418,11 +418,46 @@ def program_sentence(route: Route, jurisdiction: str) -> str:
 # question in which both programs act ("Does Florida Medicaid pay when Medicare denied ...?"). A question that names
 # no program gets the column's: "the rules" becomes "the <program> rules", else " under <program>" before the "?".
 # A single route asks every question as planned.
+# Nov 1, the four edges left open on Oct 30 (c_a3435e's Federal appeal question kept "the fair hearing"):
+# E1. A reason quoted only in part is held in both columns: a run of the reason's words, in order, whole words,
+#     case-insensitive, separated only by whitespace in both. Program words and stop words at either edge of the run
+#     are the question's own frame and are trimmed off ("a covered benefit | under Florida Medicaid", "a covered benefit
+#     | of the | Florida Medicaid ... program", so the program keeps its article); what is left is held when it has at
+#     least QUOTE_MIN_WORDS words, QUOTE_MIN_OWN_WORDS of them neither program words (Part letters included) nor stop
+#     words. So a program phrase is held only strictly inside a quote, as the letter
+#     wrote it ("not covered by Florida Medicaid Long-term Care for members in assisted living"). The trim never cuts
+#     into a mention ("the Medicare coinsurance for this visit" stays whole), and a quote never takes the question's
+#     last program phrase: then the run is the planner's paraphrase around the governing program and nothing is held.
+#     Measured on the 46 recorded dual questions: 9 runs held, none with a program phrase in it. The QMB check runs before this
+#     hold, so a quoted reason never hides a QMB question.
+# E2. In the Florida column, in an appeal question (topic "appeal") only, Medicare's appeal levels become Florida
+#     Medicaid's ("the plan appeal and the Medicaid Fair Hearing", the Florida corpus's own words): "the Medicare appeal
+#     levels (...)", "a Medicare (Part B) redetermination" or reconsideration with any list of levels after it, and a
+#     list that pairs redetermination with reconsideration; a "hearing" joins the list only as a noun of its own, never
+#     in "hearing loss" or "hearing aids", and "hearing before an ALJ" goes with the list. Elsewhere a Medicare redetermination is the letter's fact ("after a Medicare
+#     redetermination upholds the denial") and stays. Florida Medicaid also says "redetermination" for an eligibility
+#     renewal, a level of care reassessment and, twice, a "redetermination of medical necessity" (the 31 uses in the
+#     Florida corpus), so a bare "a redetermination" is never swapped ("may the member request a redetermination after a
+#     change in income?"), nor a match with an eligibility word earlier in its sentence or "of eligibility" (medical
+#     necessity, level of care) after it. The guard reads the question with held text put back, so an eligibility word
+#     inside the card's reason or a held quote counts.
+# E3. A governing "Statewide Medicaid Managed Care" is a Florida program phrase in the Federal column, "(SMMC)" and a
+#     "program" or "plan" tail with it. Held as mentions: "the SMMC contract", enrollment ("enrolled in", "a member of",
+#     "in" SMMC), SMMC before a Florida program name ("the SMMC Long-term Care program") and the other mentions; the
+#     Florida column holds it as before.
+# E4. In the Federal column a plain fair hearing with no "Medicaid" in front ("the fair hearing", "a state fair
+#     hearing", "your fair-hearing", "fair hearings") becomes Medicare's appeal levels, as "the Medicaid Fair Hearing"
+#     does. Before a noun it is a modifier and becomes "Medicare appeal" ("the fair-hearing deadline", "a fair hearing
+#     officer"). Qualified by another word it is left as written ("a Medicare fair hearing", "an independent fair
+#     hearing").
+# A question in which both programs act is asked as written, decided before the E2 and E4 terms are held, as before
+# Nov 1 ("Does Florida Medicaid's fair hearing apply when Medicare denies ...?").
 
 _PARTS = r"(?:Part\s+[ABCD](?:\s+(?:and|or|&)\s+Part\s+[ABCD])*|Parts\s+[ABCD](?:\s*(?:,|and|or|&)\s*[ABCD])*)"  # after "Medicare": any case
 _PARTS_ALONE = _PARTS.replace("[ABCD]", "(?-i:[ABCD])")  # without "Medicare" an upper-case letter only: "what part a member pays" is English
+_SMMC = r"Statewide\s+Medicaid\s+Managed\s+Care(?:\s+\(SMMC\))?"
 _FLORIDA_CORE = (
-    r"(?:(?:Florida|FL)\s+Medicaid(?:\s+(?:\((?:MMA|LTC)\)|MMA|LTC|SMMC|managed\s+medical\s+assistance(?:\s+\(MMA\))?|long[-\s]term\s+care(?:\s+\(LTC\))?|managed\s+care))?"
+    r"(?:" + _SMMC + r"|(?:Florida|FL)\s+Medicaid(?:\s+(?:\((?:MMA|LTC)\)|MMA|LTC|SMMC|managed\s+medical\s+assistance(?:\s+\(MMA\))?|long[-\s]term\s+care(?:\s+\(LTC\))?|managed\s+care))?"
     r"|(?:Florida\s+)?KidCare|(?:Florida\s+)?Healthy\s+Kids|Medicaid)"
 )
 _MEDICARE_CORE = r"(?:(?:Original\s+)?Medicare(?:\s+(?:" + _PARTS + r"|Advantage(?:\s+\(MA\))?|prescription\s+drug))?|" + _PARTS_ALONE + r")"
@@ -432,10 +467,36 @@ _FLORIDA_PROGRAM = re.compile(r"\b(?:(?P<art>the|a|an)\s+)?" + _FLORIDA_CORE + _
 _MEDICARE_PROGRAM = re.compile(r"\b(?:(?P<art>the|a|an)\s+)?" + _MEDICARE_CORE + _PLAN_TAIL, re.I)
 _EITHER_PROGRAM = re.compile(r"\b(?:Florida\s+)?Medicaid\s+(?:or|and/or)\s+Medicare\b|\bMedicare\s+(?:or|and/or)\s+(?:Florida\s+)?Medicaid\b", re.I)
 _MEDICAID_HEARING = re.compile(r"\b(?:(?:the|a)\s+)?(?:(?:Florida|FL)\s+)?Medicaid\s+fair\s+hearings?\b", re.I)
+_FOLLOW_WORDS = (  # a word after which a "hearing" is still a noun of its own (not "hearing loss", not "hearing officer")
+    "and or to for of with under from in on at by is are was were be been does do did not this that it if when so but than then has have "
+    "had will would can may must should what which who how where about into over before after within until during including through "
+    "against between unless while since upon following the a an"
+).split()
+_NOUN_ENDS = r"(?=\s*(?:[^\w\s]|$)|\s+(?:" + "|".join(_FOLLOW_WORDS) + r")\b)"
+_DETERMINER = r"(?:the|a|an|this|that|your|their|his|her|its|our|each|any|every)"
+_QUALIFIED_BEFORE = re.compile(  # E4: a fair hearing right after these is left as written ("a Medicare", "an independent")
+    r"(?:\bMedicare(?:'s)?|\b" + _DETERMINER + r"\s+(?!(?:Florida|FL|state)\b)[\w'-]+)\s+$", re.I)
+_FAIR_HEARING = re.compile(  # E4
+    r"\b(?:(?P<art>" + _DETERMINER + r")\s+)?(?P<pre>(?:(?:Florida|FL)\s+)?Medicaid's\s+|(?:Florida|FL|state)\s+)?fair(?:-|\s+)hearing(?P<pl>s)?\b", re.I)
 MEDICARE_APPEAL_LEVELS = "the Medicare appeal levels (redetermination, reconsideration, hearing)"
+FLORIDA_APPEAL_TERMS = "the plan appeal and the Medicaid Fair Hearing"
+_LEVEL_SEP = r"(?:\s*,\s*(?:(?:and|or)\s+)?|\s+(?:and|or|then)\s+)(?:(?:a|an|the)\s+)?"
+_LEVEL_NEXT = _LEVEL_SEP + r"(?:redeterminations?\b|reconsiderations?\b|(?:(?:ALJ|administrative\s+law\s+judge)\s+)?hearings?\b(?:\s+before\s+(?:an?\s+|the\s+)?(?:ALJ|administrative\s+law\s+judge)\b)?" + _NOUN_ENDS + r")"
+_MEDICARE_LEVELS = re.compile(  # E2
+    r"\b(?:(?:the|a|an)\s+)?(?:Medicare(?:'s)?\s+appeal\s+levels\b(?:\s*\([^)]*\))?"
+    r"|Medicare(?:'s)?(?:\s+" + _PARTS + r")?\s+(?:redeterminations?|reconsiderations?)\b(?:" + _LEVEL_NEXT + r")*"
+    r"|redeterminations?" + _LEVEL_SEP + r"reconsiderations?\b(?:" + _LEVEL_NEXT + r")*)",
+    re.I,
+)
+_ELIGIBILITY_WORDS = re.compile(r"\b(?:eligibility|annual|yearly|renewals?|level\s+of\s+care|LOC|medical\s+necessity)\b", re.I)
+_SENTENCE_END = re.compile(r"[.!?;](?:\s|$)")
+_ELIGIBILITY_AFTER = re.compile(r"\s+(?:of|for)\s+(?:(?:the|a)\s+)?(?:member's\s+)?(?:Medicaid\s+)?(?:eligibility|medical\s+necessity|level\s+of\s+care)\b", re.I)
+_SMMC_HELD = re.compile(r"\b" + _SMMC, re.I)  # the Florida column holds it, as before Nov 1
 _MENTION = re.compile(
     r"\b(?:(?:Florida|FL)\s+)?Medicaid\s+fair\s+hearings?\b"
-    r"|\bStatewide\s+Medicaid\s+Managed\s+Care(?:\s+\(SMMC\))?"
+    r"|\b" + _SMMC + r"(?:\s+(?:program|plan))?\s+(?:model\s+)?(?:contracts?|report\s+guide)\b"
+    r"|\b(?:enrolled\s+in|enrollment\s+in|members?\s+of|in)\s+(?:the\s+)?" + _SMMC + r"(?:\s+(?:program|plan)s?)?(?!\w)"
+    r"|\b" + _SMMC + r"\s+(?:long[-\s]term\s+care|LTC|MMA|managed\s+medical\s+assistance)(?:\s+\((?:LTC|MMA)\))?(?:\s+(?:program|plan)s?)?(?!\w)"
     r"|\b(?:Medicare|Medicaid)\.gov\b"
     r"|\bMedicare[-\s]Medicaid(?:\s+plans?)?\b|\bMedicaid[-\s]Medicare\b"
     r"|\bboth\s+" + _ANY_CORE + r"\s+and\s+" + _ANY_CORE + r"(?!\w)"
@@ -458,12 +519,125 @@ def _protected_spans(card) -> list[str]:
 
 
 def _hold(text: str, pattern: re.Pattern, held: list[str], replace=None) -> str:
-    """Replace each match of `pattern` by one private-use character; `held` keeps what goes back (the match, or `replace(m)`)."""
+    """Replace each match of `pattern` by one private-use character; `held` keeps what goes back (the match, or
+    `replace(m)`). A `replace` that returns None leaves that match as it is, not held."""
     def keep(m: re.Match) -> str:
-        held.append(replace(m) if replace else m.group(0))
+        out = replace(m) if replace else m.group(0)
+        if out is None:
+            return m.group(0)
+        held.append(out)
         return chr(_HOLD + len(held) - 1)
 
     return pattern.sub(keep, text)
+
+
+QUOTE_MIN_WORDS, QUOTE_MIN_OWN_WORDS = 4, 2  # E1: see the block comment
+_WORD = re.compile(r"\w+(?:['’-]\w+)*")
+_STOP_WORDS = frozenset(
+    "a an the of for to in on at by with under from or and as is are was were be been being does do did not no this that these those it its "
+    "your our their his her my we you they he she i me us them per if when so but than then has have had will would can may must should shall "
+    "any all each every which what who whom whose how why where there here about into over up out only also because such".split()
+)
+_PROGRAM_WORDS = frozenset(
+    "florida fl medicaid medicare original part parts advantage ma mma ltc smmc kidcare healthy kids managed medical assistance care long-term "
+    "long term program programs plan plans statewide prescription b c d".split()  # b, c, d: Part letters ("a" is a stop word)
+)
+
+
+def _quoted_runs(text: str, reason: str) -> list[tuple[int, int]]:
+    """E1: the spans of `text` that repeat a run of the reason's words long enough to be a quote, merged."""
+    def words(s: str) -> list[tuple[str, int, int]]:
+        return [(m.group(0).lower(), m.start(), m.end()) for m in _WORD.finditer(s)]
+
+    q, r = words(text), words(reason)
+    mentions = [m.span() for m in _MENTION.finditer(text)]
+    # a word inside a program's own vocabulary ("Medicare coinsurance") is never trimmed as the question's frame
+    in_mention = [any(s <= a < e for s, e in mentions) for _, a, _ in q]
+
+    def joined(toks, s, i) -> bool:  # only whitespace between word i-1 and word i
+        return not s[toks[i - 1][2]: toks[i][1]].strip()
+
+    frame = _STOP_WORDS | _PROGRAM_WORDS
+    spans = []
+    for i in range(len(q)):
+        for j in range(len(r)):
+            k = 0
+            while i + k < len(q) and j + k < len(r) and q[i + k][0] == r[j + k][0] and (k == 0 or joined(q, text, i + k) and joined(r, reason, j + k)):
+                k += 1
+            run = [w for w, _, _ in q[i: i + k]]
+            is_frame = [w in frame and not in_mention[i + x] for x, w in enumerate(run)]
+            lo, hi = 0, len(run)
+            while lo < hi and is_frame[lo]:  # program and stop words at the left edge are the question's frame, trimmed off
+                lo += 1
+            while hi > lo and is_frame[hi - 1]:  # and at the right edge ("of the | Florida Medicaid ... program")
+                hi -= 1
+            if hi - lo >= QUOTE_MIN_WORDS and sum(not is_frame[x] for x in range(lo, hi)) >= QUOTE_MIN_OWN_WORDS:
+                spans.append((q[i + lo][1], q[i + hi - 1][2]))
+    merged: list[tuple[int, int]] = []
+    for s, e in sorted(spans):
+        if merged and s <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(e, merged[-1][1]))
+        else:
+            merged.append((s, e))
+    return merged
+
+
+def _names_a_program(text: str) -> bool:
+    """True when `text` names a program outside a mention of its vocabulary."""
+    rest = _MENTION.sub(" ", text)
+    return bool(_FLORIDA_PROGRAM.search(rest) or _MEDICARE_PROGRAM.search(rest))
+
+
+def _hold_quoted_reason(text: str, card, held: list[str]) -> str:
+    """E1. A quote never takes the question's last program phrase: then the run is the planner's paraphrase of the
+    reason around the governing program ("Are meals covered under Florida Medicaid ... for members in assisted
+    living?"), and nothing is held."""
+    reason = " ".join(str(_val(card, "denial_reason") or "").split())
+    out, mark = text, len(held)
+    for s, e in reversed(_quoted_runs(text, reason) if reason else []):
+        held.append(out[s:e])
+        out = out[:s] + chr(_HOLD + len(held) - 1) + out[e:]
+    if _names_a_program(text) and not _names_a_program(out):
+        del held[mark:]
+        return text
+    return out
+
+
+def _restore(text: str, held: list[str]) -> str:
+    """`text` with each private-use character put back as the text it holds."""
+    return re.sub(f"[{chr(_HOLD)}-{chr(_HOLD + len(held) - 1)}]", lambda m: held[ord(m.group(0)) - _HOLD], text) if held else text
+
+
+def _florida_levels(m: re.Match, held: list[str]) -> str | None:
+    """E2: Florida Medicaid's appeal terms for Medicare's appeal levels, unless the words are about eligibility. The guard
+    reads the question with held text put back: an eligibility word inside the card's reason or a held quote counts."""
+    sentence = _SENTENCE_END.split(_restore(m.string[: m.start()], held))[-1]
+    if _ELIGIBILITY_WORDS.search(sentence) or _ELIGIBILITY_AFTER.match(_restore(m.string[m.end():], held)):
+        return None
+    return FLORIDA_APPEAL_TERMS
+
+
+def _medicare_hearing(m: re.Match) -> str:
+    """E4: a plain fair hearing is Medicare's appeal levels; before a noun ("the fair hearing deadline") it is "Medicare appeal".
+    Qualified by another word ("a Medicare fair hearing", "an independent fair hearing") it goes back as written."""
+    if not (m.group("art") or m.group("pre")) and _QUALIFIED_BEFORE.search(m.string[: m.start()]):
+        return m.group(0)
+    if m.group("pl") or re.match(_NOUN_ENDS, m.string[m.end():]):
+        return MEDICARE_APPEAL_LEVELS
+    if m.group("art"):
+        return f"{m.group('art')} Medicare appeal"
+    return "the Medicare appeal" if m.group("pre") and "'" in m.group("pre") else "Medicare appeal"
+
+
+def _both_act(text: str, jurisdiction: str, own: re.Pattern, other: re.Pattern) -> bool:
+    """True when both programs act in `text` (mentions and "Medicaid or Medicare" aside), on a scratch copy."""
+    scratch: list[str] = []
+    if jurisdiction != "Federal":
+        text = _hold(text, _SMMC_HELD, scratch)
+    text = _hold(text, _MENTION, scratch)
+    n = len(scratch)
+    text = _hold(text, _EITHER_PROGRAM, scratch)
+    return bool(own.search(text) and other.search(text)) and len(scratch) == n
 
 
 def question_for_jurisdiction(q: PlannedQuestion, route: Route, jurisdiction: str, card=None) -> PlannedQuestion:
@@ -475,11 +649,20 @@ def question_for_jurisdiction(q: PlannedQuestion, route: Route, jurisdiction: st
     text = _hold(q.question, re.compile("|".join(re.escape(s) for s in spans), re.I), held) if spans else q.question
     if _QMB.search(text):  # D2: about both programs
         return q
+    text = _hold_quoted_reason(text, card, held)  # E1
     label = jurisdiction_program(route, jurisdiction)
+    own, other = (_FLORIDA_PROGRAM, _MEDICARE_PROGRAM) if jurisdiction == "Florida" else (_MEDICARE_PROGRAM, _FLORIDA_PROGRAM)
     if jurisdiction == "Federal":
         text = _hold(text, _MEDICAID_HEARING, held, lambda m: MEDICARE_APPEAL_LEVELS)
+    if _both_act(text, jurisdiction, own, other):  # decided before the E2 and E4 terms are held, as before Nov 1
+        return q
+    if jurisdiction == "Federal":
+        text = _hold(text, _FAIR_HEARING, held, _medicare_hearing)  # E4
+    else:
+        if q.topic == "appeal":
+            text = _hold(text, _MEDICARE_LEVELS, held, lambda m: _florida_levels(m, held))  # E2
+        text = _hold(text, _SMMC_HELD, held)  # E3: a mention in the Florida column, as before
     text = _hold(text, _MENTION, held)
-    own, other = (_FLORIDA_PROGRAM, _MEDICARE_PROGRAM) if jurisdiction == "Florida" else (_MEDICARE_PROGRAM, _FLORIDA_PROGRAM)
     n_held = len(held)
     text = _hold(text, _EITHER_PROGRAM, held, lambda m: label)  # neither program alone: the column's own
     either = len(held) > n_held

@@ -6,7 +6,7 @@ Drop in a denial letter or an explanation of benefits, as a photo, a PDF, or tex
 
 Built for the Meta Global AI Developer Hackathon (indie track, Oct 26 to Nov 4, 2026) on Muse Spark through the Meta Model API, with Muse Spark Open on Fireworks and Baseten for the open-weights comparison. Corpus: 64 public Florida Medicaid, Medicare, Medicaid, and HIPAA documents, 2,589 pages.
 
-Live at https://recourse-murex.vercel.app (the API runs on Modal; a case costs about $0.11 in model credits and takes about 45 seconds). "See a sample case" on the landing replays a recorded run; "Start with your letter" runs a new one. Sample letters to paste are under `cases/letters/`.
+Live at https://recourse-murex.vercel.app (the API runs on Modal; a case costs about $0.11 in model credits and takes about a minute: 52 to 74 seconds in the measured site runs since Oct 29). "See a sample case" on the landing replays a recorded run; "Start with your letter" runs a new one. Sample letters to paste are under `cases/letters/`.
 
 Why it matters: KFF's 2025 analysis of prior authorization data puts denial rates at about 12% in Medicare Advantage, 14% in Medicaid managed care, and 18% in ACA marketplace plans, finds that denials are rarely appealed, and that 67%, 47%, and 43% of appealed denials respectively were overturned. Most people never file. The letter, the deadline, and the rule are the hard part, and they are what this does.
 
@@ -43,11 +43,11 @@ Live agreement rate (Oct 28, 2026, `results/case-evals-2026-10-28-second-opinion
 | Live demo, done Oct 28: the API on Modal (https://alpau-reis--recourse-api.us-east.modal.run) and the front end on Vercel (https://recourse-murex.vercel.app), synthetic sample letters; the public sample case is a recorded run of dc-001 through the API on October 28, 2026 (only the letter is synthetic); three live cases ran end to end on the deployed stack that night (`deploy/README.md`) | Oct 28 |
 | Open-weights comparison on Baseten | done Oct 28 (27 of 30; the table under Denial-case evaluation) |
 | Dual-eligible side by side | done: the router sends a letter that names both programs, or a Long-term Care member aged 65 or older, under Florida Medicaid and Medicare together, the investigation asks every question under both, the case page shows the record in two columns and the verdict states the difference; in the Oct 29 live run three cases ran side by side (dc-012 by the Long-term Care rule; dc-005 and dc-021 because the intake read their program as unknown, and the router then checks both sets of rules) and all three verdicts were right; run live on the deployed site Oct 30 (c_d8240f: inconsistent, 7 of 7 findings verified, the second opinion agreeing, 71 s, $0.158); from Oct 30 the eval report counts dual routes; from Oct 30 evening each column asks its questions in its own program's terms (the Medicare column of dc-012 went from mostly "not settled" to 14 of 14 findings supported in the live probe) |
-| Full evaluation run, numbers, write-up, video | Nov 2 to 3 |
+| Full evaluation run, numbers, write-up, video | full run done Oct 30 (26 of 30; the range 26 to 28 across two runs, under Denial-case evaluation); video Nov 3; write-up after the submission |
 
 ## Timeline and what was built when
 
-The Meta Global AI Developer Hackathon rules require new work only, and the demo may show only what was built during the event (building period Oct 27 to Nov 4, 2026). This section exists so judges can tell the two apart; the git log carries the dates.
+The Meta Global AI Developer Hackathon rules require new work only, and the demo may show only what was built during the event (building period from the Oct 26 noon kickoff to the Nov 4, 2026, 9:00 PM ET submission). This section exists so judges can tell the two apart; the git log carries the dates.
 
 **Before the event (dataset and groundwork, Oct 21 to 26):**
 - The dataset: 64 public policy PDFs selected and verified (`corpus/manifest.csv`) and the 160-row golden set, drafted by LLM agents and verified row by row by a person (`golden/golden.csv`). Built Oct 22 to 23.
