@@ -77,7 +77,7 @@ Explicitly undecided or stretch: Spanish UI; voice intake with Muse Voice Transc
 - **Voice as observed in the README and DECISIONS.md** (not yet confirmed as binding; treat as the house default until Alvaro says otherwise): plain declarative sentences, numbers always with their source, no superlatives or exclamation, candid about limits and about what was not built. The product says "the documents do not settle it" rather than guessing.
 - Binding product vocabulary: the three verdict phrasings and the seven case-flow step names above.
 - No logo, wordmark, color, or other visual identity exists yet. Nothing visual is committed.
-- Meta tooling must be visibly credited in the demo (Muse Spark for vision and generation, Muse Spark Open on Baseten, Muse Code during the build); this is a hackathon requirement, not a styling instruction.
+- Meta tooling must be visibly credited in the demo (Muse Spark for vision and generation, Muse Spark Open on Baseten; Muse Code was not used); this is a hackathon requirement, not a styling instruction.
 
 ## Evidence on Hand
 
@@ -85,7 +85,7 @@ Explicitly undecided or stretch: Spanish UI; voice intake with Muse Voice Transc
 - Dataset: `corpus/manifest.csv` (64 documents with source URLs) and `golden/golden.csv` (160 questions, six types, LLM-drafted and human-verified row by row).
 - Retrieval results with full configs: `results/*.json`; reasoning and tables in `DECISIONS.md` (hybrid plus MiniLM-20 reranker: all@10 0.712 on 139 rows, p50 415 ms on Alvaro's CPU).
 - Internal tooling: `review/judge-review.html`, a one-answer-at-a-time grading page for judge validation.
-- Absences future work must not fabricate: no real users, testimonials, customers, partners, or press; no real denial letters (samples are synthetic); no generation accuracy numbers yet (pending the Muse Spark runs and judge validation); no pricing, licensing, or compliance claims (HIPAA documents are in the corpus as subject matter, not as a compliance certification); the full 64-document retrieval run is pending (59 reachable so far).
+- Absences future work must not fabricate: no real users, testimonials, customers, partners, or press; no real denial letters (samples are synthetic); no accuracy number that is not a recorded run in `results/` (the three full runs give 25 to 28 of 30; see README, "Denial-case evaluation"); no pricing, licensing, or compliance claims (HIPAA documents are in the corpus as subject matter, not as a compliance certification); the full 64-document retrieval run is pending (59 reachable so far).
 
 ## Product Principles
 

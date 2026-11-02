@@ -154,7 +154,7 @@ const T = {
     { text: "All 224 letter claims verified against the page\n(71 of 71, 75 of 75, 78 of 78)", cue: "All two hundred" },
     { text: "Open model (Muse Spark Open) agreed on 79 of 84", cue: "The open model" },
     { text: "About $0.10 a case", cue: "About ten cents" },
-    { text: "Test data built before the event \u00b7 every number is in the repo:\ngithub.com/paureis/recourse", cue: "The test data" },
+    { text: "Every number is in the repo:\ngithub.com/paureis/recourse", cue: "Every number" },
   ],
   script: "C:/Users/pau/recourse/video/script.md",
   length: 180,

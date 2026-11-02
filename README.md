@@ -12,6 +12,15 @@ Why it matters: KFF's 2025 analysis of prior authorization data puts denial rate
 
 The point of the project is not the demo. Every step is measured against a human-verified golden set before it ships, and the judge that grades answers is itself validated against human verdicts.
 
+## For judges: start here
+
+- **Live:** https://recourse-murex.vercel.app. "See a sample case" replays a real run of a sample letter, free, in under a minute of reading. "Start with your letter" runs a new case in about a minute. Letters to paste are under `cases/letters/`, or use "Try a sample letter" on the intake desk.
+- **What it does:** a denial letter in; an investigated, verified verdict and a cited appeal letter out. Three verdicts only, and the documents are allowed to say "not settled". Never medical advice.
+- **The numbers**, from three full runs of the 30 reviewed denial cases (`results/case-evals-2026-10-29.md`, `results/case-evals-2026-10-30.md`, `results/case-evals-2026-11-01-full.md`): the verdict right on 25 to 28 of 30; 12 or 13 of the 13 inconsistent denials caught; 224 of 224 appeal-letter claims verified against the page, 0 struck; the open-weights second opinion agreeing on 79 of 84; about $0.10 and about a minute a case. The judge that grades the golden-set answers agreed with a person on 84% of 50 answers (kappa 0.70). The tables are under "Denial-case evaluation" below.
+- **Where Meta tooling shows on screen:** every stage runs on Muse Spark 1.3 through the Meta Model API (the API's `/health` lists the model per stage); "Muse Spark vision check" under each policy exhibit is the page image read back against the quote; "Second opinion: Muse Spark Open agrees" is the verdict run again on the open-weights model at Baseten. The whole chain was also run on Muse Spark Open, 23 of 30 on Fireworks and 27 of 30 on Baseten ("Open-weights comparison" below).
+- **What was built when:** the product from the Oct 26 noon kickoff; the dataset and the retrieval groundwork before it, disclosed in "Timeline".
+- **The video** walks the same path on the live site in three minutes.
+
 ## How a case runs
 
 1. **Intake.** Muse Spark reads the letter (image, PDF, or text) into a case card: program (Florida Medicaid MMA, LTC, KidCare, Medicare A, B, Advantage, Part D), member age group, service and code, dates, amount, the payer's stated reason, letter date, and the deadline the letter claims. The user corrects anything wrong.
@@ -21,6 +30,8 @@ The point of the project is not the demo. Every step is measured against a human
 5. **Verdict.** Consistent with the policy, inconsistent with the policy, or not settled by the documents. Each names the rule and the gap between the letter's reason and that rule.
 6. **Action.** A draft appeal letter where every sentence carries a citation and has passed the verifier; an evidence checklist derived from the policy's own conditions; the deadline with a day count and the filing path, cited from the appeals documents in the corpus. For a consistent denial, a plain explanation and what would have made the service covered.
 7. **Trust.** Verification coverage (claims supported over claims made), cost of the case, time taken, and the full trace.
+
+**Scope, plainly.** The corpus is Florida Medicaid (MMA, Long-term Care, KidCare), Medicare (Parts A, B, D and Medicare Advantage) and HIPAA. The Medicare documents are federal, so a Medicare denial from any state is in scope; a Medicaid denial from another state is not, and the router says so. A denial that turns on medical necessity, or on a document the corpus does not hold (a plan's own drug list, a provider's clinical records), comes out "not settled" with the evidence checklist the policy implies, which is the honest answer and is scored as a correct one in the evaluation. "Where to file" is filled when the documents name the route; when they do not, the page says "Not stated in the documents we found" and points to the letter's own appeal section.
 
 **Second opinion.** After the verdict, the same Steelman and Verdict stage runs a second time on Meta's open-weights model, Muse Spark Open, with the same findings, the same prompt and the same code guards; only the model differs. It runs beside the letter, and nothing in the chain waits for it, so the case status can reach `reviewed` before the second opinion finishes: a client polls `GET /case/{id}` until `second_opinion.status` is not `running`. The case records whether the two models agree (`second_opinion.agrees`). It never changes the verdict, and the letter and the critic read only the primary verdict. It is skipped, with the reason, when it is not configured or when the verdict made no model call (the verdict failed, a plan outside the corpus, no supported finding, a model failure, or the fixture verdict used without a model key). A second opinion still running when the server restarts loads as `failed`. Configure it with `POLICYQA_SECOND_LLM_BASE_URL`, `POLICYQA_SECOND_LLM_MODEL` and `POLICYQA_SECOND_LLM_API_KEY`, plus `POLICYQA_SECOND_LLM_INPUT_USD_PER_M` and `POLICYQA_SECOND_LLM_OUTPUT_USD_PER_M` (the primary's prices when unset); see `.env.example` and `policyqa/second_opinion.py`. `case-evals` reports the agreement rate, the cases where only one of the two is right, and the second opinion's cost.
 
@@ -37,9 +48,9 @@ Live agreement rate (Oct 28, 2026, `results/case-evals-2026-10-28-second-opinion
 | Generation on Muse Spark via the Meta Model API | wired Oct 26 (`python -m policyqa.cli smoke`, `/answer`); first live call when the key exists |
 | Intake screen (`/case/new`) and case intake endpoints from photo, PDF, or text; fixture mode until the key exists | built Oct 26, live on Muse Spark Oct 27 |
 | Program routing | Oct 28 |
-| Investigation agent with verified findings | Oct 28 |
-| Steelman, verdict, appeal letter, deadline and filing steps, evidence checklist, scope guardrail | Oct 29 |
-| Denial-case eval set (about 30 synthetic letters with known verdicts), judge validation against human verdicts | Oct 30 |
+| Investigation agent with verified findings | built Oct 26 evening (`d3d7b03`), tuned Oct 27 to 29 |
+| Steelman, verdict, appeal letter, deadline and filing steps, evidence checklist, scope guardrail | built Oct 26 evening (`a557bb6`), the self-critic that night |
+| Denial-case eval set (about 30 synthetic letters with known verdicts), judge validation against human verdicts | the 30 cases drafted and reviewed Oct 26 evening (`2c80562`), the eval harness that night (`fe7364f`); the judge graded against Alvaro's verdicts Oct 28 |
 | Live demo, done Oct 28: the API on Modal (https://alpau-reis--recourse-api.us-east.modal.run) and the front end on Vercel (https://recourse-murex.vercel.app), synthetic sample letters; the public sample case is a recorded run of dc-001 through the API on October 28, 2026 (only the letter is synthetic); three live cases ran end to end on the deployed stack that night (`deploy/README.md`) | Oct 28 |
 | Open-weights comparison on Baseten | done Oct 28 (27 of 30; the table under Denial-case evaluation) |
 | Dual-eligible side by side | done: the router sends a letter that names both programs, or a Long-term Care member aged 65 or older, under Florida Medicaid and Medicare together, the investigation asks every question under both, the case page shows the record in two columns and the verdict states the difference; in the Oct 29 live run three cases ran side by side (dc-012 by the Long-term Care rule; dc-005 and dc-021 because the intake read their program as unknown, and the router then checks both sets of rules) and all three verdicts were right; run live on the deployed site Oct 30 (c_d8240f: inconsistent, 7 of 7 findings verified, the second opinion agreeing, 71 s, $0.158); from Oct 30 the eval report counts dual routes; from Oct 30 evening each column asks its questions in its own program's terms (the Medicare column of dc-012 went from mostly "not settled" to 14 of 14 findings supported in the live probe) |
@@ -140,7 +151,7 @@ Scoring rule:
 - A critic failure leaves the verdict's score alone, because the product keeps the letter as drafted by design, and is counted as `critic_failures`.
 - `--limit` must be 1 or more; leave it out to run every case.
 
-Current numbers: Oct 29, 2026, after the third verdict tuning pass (`results/case-evals-2026-10-29.json` and `.md`); the Oct 28 column is the second tuning pass (`results/case-evals-2026-10-28.*`); the Oct 27 run is the first pass (`results/case-evals-2026-10-27.*`: 25 of 30, 83.3%, 81 of 81 letter claims over 22 letters, $0.095 and 47 s a case); the Oct 26 baseline is the first live run, before any tuning (`results/case-evals-2026-10-26.*`: 22 of 30, 73.3%, letter claims 61 of 61 over 16 letters, $0.084 and 34 s a case). All runs: Muse Spark 1.3, reasoning effort low, critic 1 round, three cases at a time.
+The Oct 29 run (the best of the three full runs of this chain; the Oct 30 and Nov 1 runs and the range are under "Run-to-run variance" below), after the third verdict tuning pass (`results/case-evals-2026-10-29.json` and `.md`); the Oct 28 column is the second tuning pass (`results/case-evals-2026-10-28.*`); the Oct 27 run is the first pass (`results/case-evals-2026-10-27.*`: 25 of 30, 83.3%, 81 of 81 letter claims over 22 letters, $0.095 and 47 s a case); the Oct 26 baseline is the first live run, before any tuning (`results/case-evals-2026-10-26.*`: 22 of 30, 73.3%, letter claims 61 of 61 over 16 letters, $0.084 and 34 s a case). All runs: Muse Spark 1.3, reasoning effort low, critic 1 round, three cases at a time.
 
 | Measure | Oct 29 (current) | Oct 28 | Change |
 |---|---|---|---|
@@ -159,7 +170,7 @@ Oct 29 misses (2): dc-002, consistent, came out inconsistent again (retrieval: n
 
 Run-to-run variance on the same code (Oct 30, 2026): the code of the Oct 29 run (no change to `policyqa/` or `api/` except the eval's own reporting) was run again on all 30 cases (`results/case-evals-2026-10-30.*`), and the four cases it missed were run a third time (`results/case-evals-2026-10-30-misses.*`). The accuracy of this code is a range, not one number: 26 to 28 of 30 across the two full runs. The rest of the Oct 30 run: intended consistent 9 of 10, inconsistent 12 of 13, not settled 4 of 6; the refusal correct; letter claims 75 of 75 over 19 letters, 0 struck; critic revisions accepted 15 of 19; the second opinion agreeing on 28 of 28; dual routes 3 of 3 (dc-012, dc-021, dc-030; the first run to record them); mean $0.094 and p50 $0.098 a case, $2.81 for the run; mean 45 s and p50 49 s a case (the API was slower than on Oct 29 all day); 0 errors, 0 template letters, 0 critic failures.
 
-Third full run (Nov 1, 2026, `results/case-evals-2026-11-01-full.*`, on `df659d8`, after the dual-route wording change of that day; the single-route path is byte-identical by test): 25 of 30. Intended consistent 8 of 10, inconsistent 12 of 13, not settled 4 of 6; the refusal correct; letter claims 78 of 78 over 20 letters, 0 struck; critic revisions accepted 13 of 20; the second opinion agreeing on 25 of 28 (dc-003 and dc-027 where the verdict was wrong and the open model right, and dc-009 the other way); dual routes 4 of 4 (dc-005, dc-012, dc-021, dc-030, all right); mean $0.096 and p50 $0.098 a case, $2.87 for the run; mean 47 s and p50 53 s a case; 0 errors, 0 template letters, 0 critic failures. The two misses new to this run, dc-003 and dc-027, were each run twice more (`results/case-evals-2026-11-01-misses-1.*` and `-2.*`) and came back right both times. The range across the three full runs is 25 to 28 of 30.
+Third full run (Nov 1, 2026, `results/case-evals-2026-11-01-full.*`, on `df659d8`, after the dual-route wording change of that day; the single-route path is byte-identical by test): 25 of 30. Intended consistent 8 of 10, inconsistent 12 of 13, not settled 4 of 6; the refusal correct; letter claims 78 of 78 over 20 letters, 0 struck; critic revisions accepted 13 of 20; the second opinion agreeing on 25 of 28 (dc-009 and dc-027 where the open model was right and the verdict wrong; dc-003 where both were wrong); dual routes 4 of 4 (dc-005, dc-012, dc-021, dc-030, all right); mean $0.096 and p50 $0.098 a case, $2.87 for the run; mean 47 s and p50 53 s a case; 0 errors, 0 template letters, 0 critic failures. The two misses new to this run, dc-003 and dc-027, were each run twice more (`results/case-evals-2026-11-01-misses-1.*` and `-2.*`) and came back right both times. The range across the three full runs is 25 to 28 of 30.
 
 | Case | Intended | Oct 29 | Oct 30 | Oct 30, re-run | Nov 1 | Nov 1, two re-runs | Reading |
 |---|---|---|---|---|---|---|---|
@@ -208,6 +219,15 @@ Fine-tune (Oct 29, 2026): built and blocked, not run. `policyqa/finetune.py` bui
 
 What the Oct 26 misses said (recorded in DECISIONS.md, Oct 26): four "not settled" rows came out "consistent" because the model takes the payer's stated facts as given (dc-009, dc-014, dc-020 scored on its alternate, dc-002 the other way); three "inconsistent" rows whose proof is an exception elsewhere in the document came out "not settled" or "consistent" (dc-018 eyeglasses after cataract surgery, dc-026 rosacea not cosmetic, dc-021 QMB cost sharing); dc-017 is a close call either way; dc-030, the employer plan, was answered with an "inconsistent" verdict although the route said no corpus document governs it, a product bug fixed the same night. These are the tuning targets, measured before any change.
 
+### Limits of these numbers
+
+- **The 30 cases are in-sample.** The verdict stages were tuned on Oct 27 to 29 against misses in this same set, so 25 to 28 of 30 is the tuned chain's score on the letters it was tuned on, not an out-of-sample estimate. The golden set's 50-row judge subset is the held-out measure for the answer stage (58.7 percent judge-correct on the open model, equal to Muse Spark 1.3's on Oct 26).
+- **15 of the 30 cases are human-verified; 15 are agent-verified only.** Two blind agent reviewers graded every row; Alvaro decided 15 rows (the demo rows and the rows the reviewers flagged or disagreed on), and the other 15 stand on the reviewers' agreement alone (`cases/README.md`, "Review protocol").
+- **"Verified" means found on the cited page.** A claim or finding is verified when its quote exists verbatim in the cited passage (document, page) and, for an exhibit, when the vision check reads the highlighted region back as the quote. It does not mean the argument built on the quote is correct; the verdict accuracy row measures that.
+- **The accuracy is a range.** The same chain scored 28, 26 and 25 of 30 on Oct 29, Oct 30 and Nov 1 with no change to the single-route path; two cases (dc-002, dc-017) miss on every run and three others miss on some runs. Treat a one-case difference between any two runs as noise.
+- **The second opinion measures agreement, not accuracy.** On Nov 1 it agreed with 25 of 28 verdicts and was right on two the verdict got wrong; on Oct 30 it agreed with all four wrong verdicts.
+- **No real letters, no real users.** Every case is a synthetic letter written for the evaluation; the KFF figures describe the problem, not this product's effect on it.
+
 ## Design notes
 
 - Chunks never cross a page. A citation is (document, page), and a chunk that spans pages cannot be cited honestly.
@@ -215,7 +235,7 @@ What the Oct 26 misses said (recorded in DECISIONS.md, Oct 26): four "not settle
 - BM25 and dense lists are fused with reciprocal rank fusion. Their scores live on different scales and RRF needs no tuning.
 - Local open models only for retrieval (bge-small-en-v1.5, bge-reranker-base). An index rebuild costs nothing and needs no key.
 
-Decisions with reasons are in `DECISIONS.md` (to be written as they are made).
+Decisions with reasons are in `DECISIONS.md` (one dated entry per decision, kept as they were made).
 
 ## License
 

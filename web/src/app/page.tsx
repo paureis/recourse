@@ -55,6 +55,15 @@ export default function Home() {
           </div>
         </div>
         <ProofSheet />
+        {/*
+          The tooling credit (PRODUCT.md, Brand Commitments): one quiet line under the proof, in the scope line's
+          register (16 px muted, 15 px from 1024), at the column's left edge under 1024 and the sheet's left edge from
+          1024, 40 px under the sheet (the phone's gap between blocks and the desktop sheet's bottom inset).
+        */}
+        <p className="mt-10 text-[16px] text-muted lg:text-[15px]" data-credit-line="landing">
+          Built on Muse Spark 1.3 through the Meta Model API. The second opinion runs on Muse Spark Open at Baseten. Every
+          number shown comes from a recorded run.
+        </p>
       </main>
     </div>
   );
