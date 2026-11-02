@@ -22,10 +22,10 @@ The clip is 126.6 s by ffprobe: 3,165 frames at 25 fps, last frame at 126.56 s. 
 | 4 | 1:10 to 1:40 | 62 words, 30 s | `seg4-exhibit-pair-view.png` 14 s; clip 99.40 to 102.56 (3.2 s); `seg4-see-the-page-view.png` 12.8 s | The clip piece carries the click: the panel opens at 99.60 and the page draws at 100.00. Cut before 102.60, where the focus outline appears. Add a click marker on "See the page"; the headless clip has no cursor. |
 | 5 | 1:40 to 2:05 | 50 words, 25 s | `seg5-letter-sheet-view.png` 8.5 s; deadline shot 5.5 s (decision 3); `seg5-second-opinion-view.png` 11 s | Slow push-in to the second opinion line (x 138 to 445, y 310 to 326 in the still) on "Here, it agrees." |
 | 6 | 2:05 to 2:15 | 23 words, 10 s | `seg6-notsettled-stamp-view.png` (stale) or today's reload of `c_d2d12f` (decision 7) | Hold 10 s on the stamp and "Find what would settle it". The outline's "two seconds" is shorter than the row's 23 words, so the script's 10 s span rules. |
-| 7 | 2:15 to 2:45 | 74 words, 30 s | The numbers card, made in the edit (section 6) | One line per spoken sentence. Bring each line in as it is spoken. |
+| 7 | 2:15 to 2:45 | 75 words, 30 s | The numbers card, made in the edit (section 6) | One line per spoken sentence. Bring each line in as it is spoken. |
 | 8 | 2:45 to 3:00 | 29 words, 15 s | `seg8-landing-view.png` (stale), so a landing retake (decision 2) | Overlay "recourse-murex.vercel.app" and "github.com/paureis/recourse" as they are spoken. |
 
-Total: 389 words over 180 s. Row 7 is the fastest row (74 words in 30 s, about 148 a minute, against about 130 for the whole script). The script's timings are a draft until Alvaro reads them aloud.
+Total: 390 words over 180 s (389 before the Nov 1 card change). Row 7 is the fastest row (75 words in 30 s, about 150 a minute, against about 130 for the whole script). The script's timings are a draft until Alvaro reads them aloud.
 
 ### Notes per row
 
@@ -150,11 +150,11 @@ On screen, numerals; in the voice, words (row 7 as written). One line per spoken
 
 | # | On the card | Spoken sentence | Source |
 |---|---|---|---|
-| 1 | Tested on 30 reviewed denial letters, twice | "We tested it on thirty reviewed denial letters, twice." | `results/case-evals-2026-10-29.md` and `results/case-evals-2026-10-30.md` (Cases: 30 each); `cases/README.md` (the review) |
-| 2 | Verdict right on 26 to 28 of 30; 12 or 13 of 13 where the denial did not match the policy | "The verdict was right on twenty-six to twenty-eight of thirty, and on twelve or thirteen of the thirteen where the denial did not match the policy." | Accuracy 28 / 30 and Intended inconsistent 13 / 13 (Oct 29); 26 / 30 and 12 / 13 (Oct 30); README, Run-to-run variance |
-| 3 | All 146 letter claims verified against the page (71 of 71, 75 of 75) | "All one hundred forty-six letter claims were verified against the page." | Letter claims verified 71 / 71 (Oct 29) and 75 / 75 (Oct 30), 0 struck in both |
-| 4 | Open model (Muse Spark Open) agreed on 54 of 56 | "The open model agreed on fifty-four of fifty-six." | Second opinion agrees 26 / 28 (Oct 29) and 28 / 28 (Oct 30) |
-| 5 | About $0.10 a case | "About ten cents a case." | Cost per case mean $0.0942 (Oct 29) and $0.0935 (Oct 30) |
+| 1 | Tested on 30 reviewed denial letters, three times | "We tested it on thirty reviewed denial letters, three times." | `results/case-evals-2026-10-29.md`, `results/case-evals-2026-10-30.md` and `results/case-evals-2026-11-01-full.md` (Cases: 30 each); `cases/README.md` (the review) |
+| 2 | Verdict right on 25 to 28 of 30; 12 or 13 of 13 where the denial did not match the policy | "The verdict was right on twenty-five to twenty-eight of thirty, and on twelve or thirteen of the thirteen where the denial did not match the policy." | Accuracy 28 / 30 and Intended inconsistent 13 / 13 (Oct 29); 26 / 30 and 12 / 13 (Oct 30); 25 / 30 and 12 / 13 (Nov 1); README, Run-to-run variance |
+| 3 | All 224 letter claims verified against the page (71 of 71, 75 of 75, 78 of 78) | "All two hundred twenty-four letter claims were verified against the page." | Letter claims verified 71 / 71 (Oct 29), 75 / 75 (Oct 30) and 78 / 78 (Nov 1), 0 struck in all three |
+| 4 | Open model (Muse Spark Open) agreed on 79 of 84 | "The open model agreed on seventy-nine of eighty-four." | Second opinion agrees 26 / 28 (Oct 29), 28 / 28 (Oct 30) and 25 / 28 (Nov 1) |
+| 5 | About $0.10 a case | "About ten cents a case." | Cost per case mean $0.0942 (Oct 29), $0.0935 (Oct 30) and $0.0956 (Nov 1) |
 | 6 | Test data built before the event · every number is in the repo: github.com/paureis/recourse | "The test data was built before the event, and every number is in the repo." | README, "Before the event (dataset and groundwork, Oct 21 to 26)" |
 
 The outline's card also lists the judge agreement (84% on 50 answers, kappa 0.70), the time and the dataset size. The script does not speak them, so they stay off the card. That matches the script's alternative line for row 7, which is not taken.

@@ -1,0 +1,378 @@
+{
+  "config": {
+    "date": "2026-11-01",
+    "model": "muse-spark-1.3",
+    "reasoning_effort": "low",
+    "prices": {
+      "input_usd_per_m": 1.25,
+      "output_usd_per_m": 4.25
+    },
+    "second_model": "meta-models/muse-spark-open-1026",
+    "modes": {
+      "intake": "muse-spark-1.3",
+      "investigation": "muse-spark-1.3",
+      "verdict": "muse-spark-1.3",
+      "critic": "muse-spark-1.3"
+    },
+    "critic_rounds": 1,
+    "concurrency": 2,
+    "cases": "C:\\Users\\pau\\recourse\\cases\\cases.csv",
+    "ids": [
+      "dc-003",
+      "dc-027"
+    ],
+    "limit": null,
+    "alternates": {
+      "dc-008": [
+        "not_settled"
+      ],
+      "dc-020": [
+        "consistent"
+      ]
+    },
+    "refusal_ids": [
+      "dc-011"
+    ],
+    "wall_s": 65.7
+  },
+  "summary": {
+    "n": 2,
+    "correct": 2,
+    "accuracy": 1.0,
+    "by_intended": {
+      "consistent": {
+        "n": 1,
+        "correct": 1,
+        "accuracy": 1.0
+      },
+      "inconsistent": {
+        "n": 1,
+        "correct": 1,
+        "accuracy": 1.0
+      }
+    },
+    "by_program": {
+      "florida_medicaid_mma": {
+        "n": 1,
+        "correct": 1,
+        "accuracy": 1.0
+      },
+      "medicare_part_d": {
+        "n": 1,
+        "correct": 1,
+        "accuracy": 1.0
+      }
+    },
+    "by_jurisdiction": {
+      "Federal": {
+        "n": 1,
+        "correct": 1,
+        "accuracy": 1.0
+      },
+      "Florida": {
+        "n": 1,
+        "correct": 1,
+        "accuracy": 1.0
+      }
+    },
+    "refusal_correct": null,
+    "letter_failures": 0,
+    "critic_failures": 0,
+    "outside_corpus": [],
+    "letters": {
+      "applicable": 1,
+      "claims": 3,
+      "verified": 3,
+      "struck": 0,
+      "verification_rate": 1.0,
+      "struck_rate": 0.0
+    },
+    "critic": {
+      "reviewed": 1,
+      "accepted": 1,
+      "skipped": 1,
+      "errors": 0,
+      "issues_found": 3,
+      "issues_fixed": 3
+    },
+    "cost_usd": {
+      "total": 0.166945,
+      "mean": 0.083473,
+      "p50": 0.083473
+    },
+    "seconds": {
+      "total": 103.2,
+      "mean": 51.6,
+      "p50": 51.6
+    },
+    "confusion": {
+      "consistent": {
+        "consistent": 1
+      },
+      "inconsistent": {
+        "inconsistent": 1
+      }
+    },
+    "errors": [],
+    "wrong": [],
+    "misses": [],
+    "misses_by_stage": {},
+    "second_opinion": {
+      "configured": true,
+      "models": [
+        "meta-models/muse-spark-open-1026"
+      ],
+      "ran": 2,
+      "done": 2,
+      "failed": 0,
+      "timeout": 0,
+      "skipped": 0,
+      "skip_reasons": {},
+      "both_done": 2,
+      "agree": 2,
+      "agreement_rate": 1.0,
+      "second_right_primary_wrong": [],
+      "primary_right_second_wrong": [],
+      "cost_usd": {
+        "total": 0.013527,
+        "mean": 0.006764,
+        "p50": 0.006764
+      },
+      "latency_ms": {
+        "total": 7598.3,
+        "mean": 3799.1,
+        "p50": 3799.1
+      }
+    },
+    "dual_routes": {
+      "recorded": true,
+      "routed": 0,
+      "correct": 0,
+      "cases": []
+    }
+  },
+  "rows": [
+    {
+      "id": "dc-003",
+      "program": "florida_medicaid_mma",
+      "jurisdiction": "Florida",
+      "trap": "no",
+      "demo": "no",
+      "intended": "consistent",
+      "intended_csv": "consistent",
+      "got": "consistent",
+      "correct": true,
+      "refused": null,
+      "route_program": "florida_medicaid_mma",
+      "route_reason": "The letter is about Florida Medicaid (MMA), so the Florida Medicaid rules decide this case.",
+      "route_outside_corpus": false,
+      "route_dual": false,
+      "route_jurisdictions": [
+        "Florida"
+      ],
+      "stage_errors": [],
+      "findings": {
+        "supported": 5,
+        "not_settled": 0,
+        "unsupported": 0,
+        "error": 0
+      },
+      "letter": {
+        "applicable": false,
+        "claims": 0,
+        "verified": 0,
+        "struck": 0,
+        "error": null
+      },
+      "critique": {
+        "rounds": 0,
+        "issues_found": 0,
+        "issues_fixed": 0,
+        "accepted": false,
+        "skipped": true,
+        "error": null
+      },
+      "cost_usd": 0.066203,
+      "stage_cost_usd": {
+        "intake": 0.007224,
+        "investigation": 0.051197,
+        "verdict": 0.007782,
+        "letter": 0.0,
+        "critique": 0.0
+      },
+      "seconds": 37.9,
+      "error": null,
+      "proposed_outcome": "consistent",
+      "decisive_fact": "The second visit began 40 minutes after the first visit ended, which is less than an hour apart",
+      "settled_by": "letter",
+      "relies_on_exception": false,
+      "plan_source": "model",
+      "planned_questions": [
+        {
+          "topic": "coverage",
+          "question": "Is a home health skilled nursing visit covered by Florida Medicaid for an adult?"
+        },
+        {
+          "topic": "reason",
+          "question": "What does Florida Medicaid say about covering a home health skilled nursing visit when a second intermittent visit begins less than an hour after the first visit ended, such as 40 minutes later on the same day?"
+        },
+        {
+          "topic": "exclusions",
+          "question": "Under Florida Medicaid, is there an exception or second rule that covers a second home health skilled nursing visit on the same day 40 minutes after the first visit ended even though visits less than an hour apart are generally not covered, especially when the first visit that day was paid?"
+        },
+        {
+          "topic": "limits",
+          "question": "Under Florida Medicaid, what are the limits on how many home health skilled nursing visits can be billed in one day or how far apart the visits must be?"
+        },
+        {
+          "topic": "appeal",
+          "question": "For Florida Medicaid, what are the rules for challenging a denial through an adverse benefit determination, grievance or appeal, and fair hearing, including the deadline and where to file?"
+        }
+      ],
+      "exceptions": [
+        {
+          "finding_id": "f3",
+          "question": "Under Florida Medicaid, is there an exception or second rule that covers a second home health skilled nursing visit on the same day 40 minutes after the first visit ended even though visits less than an hour apart are generally not covered, especially when the first visit that day was paid?",
+          "status": "supported",
+          "state": "unchecked",
+          "relevant": null,
+          "reason": "the letter states no specific fact an exception could turn on (a procedure, what the drug is for, a program such as QMB), so the quote could not be checked against one"
+        }
+      ],
+      "hinge": {
+        "doc_id": "fl-03",
+        "page": 7,
+        "reached": [
+          "f2"
+        ],
+        "cited": [
+          "f2"
+        ]
+      },
+      "miss": null,
+      "second_status": "done",
+      "second_reason": null,
+      "second_model": "meta-models/muse-spark-open-1026",
+      "second_outcome": "consistent",
+      "second_agrees": true,
+      "second_cost_usd": 0.00573,
+      "second_latency_ms": 3331.6
+    },
+    {
+      "id": "dc-027",
+      "program": "medicare_part_d",
+      "jurisdiction": "Federal",
+      "trap": "no",
+      "demo": "no",
+      "intended": "inconsistent",
+      "intended_csv": "inconsistent",
+      "got": "inconsistent",
+      "correct": true,
+      "refused": null,
+      "route_program": "medicare_part_d",
+      "route_reason": "The letter is about Medicare Part D, so the federal Medicare rules decide this case.",
+      "route_outside_corpus": false,
+      "route_dual": false,
+      "route_jurisdictions": [
+        "Federal"
+      ],
+      "stage_errors": [],
+      "findings": {
+        "supported": 5,
+        "not_settled": 0,
+        "unsupported": 0,
+        "error": 0
+      },
+      "letter": {
+        "applicable": true,
+        "claims": 3,
+        "verified": 3,
+        "struck": 0,
+        "error": null
+      },
+      "critique": {
+        "rounds": 1,
+        "issues_found": 3,
+        "issues_fixed": 3,
+        "accepted": true,
+        "skipped": false,
+        "error": null
+      },
+      "cost_usd": 0.100742,
+      "stage_cost_usd": {
+        "intake": 0.007801,
+        "investigation": 0.051099,
+        "verdict": 0.011174,
+        "letter": 0.01075,
+        "critique": 0.019918
+      },
+      "seconds": 65.3,
+      "error": null,
+      "proposed_outcome": "inconsistent",
+      "decisive_fact": "The 30-day fill on September 10 was within the first 90 days of new coverage starting September 1 for a drug the member was already taking before joining.",
+      "settled_by": "letter",
+      "relies_on_exception": true,
+      "plan_source": "model",
+      "planned_questions": [
+        {
+          "topic": "coverage",
+          "question": "Is a 30-day supply of a prescription drug covered under Medicare Part D drug coverage?"
+        },
+        {
+          "topic": "reason",
+          "question": "What does Medicare Part D drug coverage say about denying a 30-day supply of a prescription drug because the drug is not on the plan's formulary list of covered drugs?"
+        },
+        {
+          "topic": "exclusions",
+          "question": "Under Medicare Part D drug coverage, is there an exception or transition-supply rule that covers a 30-day supply of a prescription drug even though it is not on the formulary when the member was already taking the drug before joining the plan with coverage starting September 1, 2026?"
+        },
+        {
+          "topic": "conditions",
+          "question": "What does Medicare Part D drug coverage require to approve a formulary exception for a 30-day supply of a prescription drug, such as prior approval or paperwork from the prescriber?"
+        },
+        {
+          "topic": "appeal",
+          "question": "What is the Medicare Part D appeal process, including the deadline and where to file an appeal or request a hearing?"
+        }
+      ],
+      "exceptions": [
+        {
+          "finding_id": "f3",
+          "question": "Under Medicare Part D drug coverage, is there an exception or transition-supply rule that covers a 30-day supply of a prescription drug even though it is not on the formulary when the member was already taking the drug before joining the plan with coverage starting September 1, 2026?",
+          "status": "supported",
+          "state": "unchecked",
+          "relevant": null,
+          "reason": "the letter states no specific fact an exception could turn on (a procedure, what the drug is for, a program such as QMB), so the quote could not be checked against one"
+        },
+        {
+          "finding_id": "f4",
+          "question": "What does Medicare Part D drug coverage require to approve a formulary exception for a 30-day supply of a prescription drug, such as prior approval or paperwork from the prescriber?",
+          "status": "supported",
+          "state": "unchecked",
+          "relevant": null,
+          "reason": "the letter states no specific fact an exception could turn on (a procedure, what the drug is for, a program such as QMB), so the quote could not be checked against one"
+        }
+      ],
+      "hinge": {
+        "doc_id": "fed-10",
+        "page": 41,
+        "reached": [
+          "f3",
+          "f4"
+        ],
+        "cited": [
+          "f3",
+          "f4"
+        ]
+      },
+      "miss": null,
+      "second_status": "done",
+      "second_reason": null,
+      "second_model": "meta-models/muse-spark-open-1026",
+      "second_outcome": "inconsistent",
+      "second_agrees": true,
+      "second_cost_usd": 0.007797,
+      "second_latency_ms": 4266.7
+    }
+  ]
+}
