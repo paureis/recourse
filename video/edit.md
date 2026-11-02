@@ -174,8 +174,10 @@ The script says "On the site this takes about a minute." Every measured time:
 | Site, dc-010 `c_d2d12f`, Confirm to reviewed (receipt 71) | Oct 29, 9:24 pm ET | 72.1 | `video/shots-2026-10-29.md` |
 | Site, dc-012 dual `c_d8240f` | Oct 30 afternoon | 71 | `DECISIONS.md`, Oct 30, 1:00 to 3:30 pm |
 | Site, dc-012 dual `c_a3435e`, to reviewed | Oct 30 evening, after the Modal deploy | 64 | `DECISIONS.md`, Oct 30, 6:00 to 8:30 pm |
+| Site, dc-001 rehearsal `c_7f789d`, Confirm to the Trust tick (receipt 57) | Nov 2, 12:20 pm ET | 58.7 | `video/rehearsal-2026-11-02.md` |
+| Site, dc-001 take `c_6f3143`, Confirm to the Trust tick (receipt 51) | Nov 2, 12:42 pm ET | 51.4 | `video/take-2026-11-02.md` (the clip the video now uses) |
 
-Every site run since the noon rehearsal took 64 to 74 s, and the eval means are 38.5 and 45.3 s. "About a minute" holds for all of them.
+Every site run since the noon rehearsal took 51 to 74 s, and the eval means are 38.5, 45.3 and 46.8 s. "About a minute" holds for all of them.
 
 Recommendation for recording day:
 1. Run the warm-up case (outline checklist 2) and time it from Confirm to the Trust tick.

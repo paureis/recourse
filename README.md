@@ -6,7 +6,7 @@ Drop in a denial letter or an explanation of benefits, as a photo, a PDF, or tex
 
 Built for the Meta Global AI Developer Hackathon (indie track, Oct 26 to Nov 4, 2026) on Muse Spark through the Meta Model API, with Muse Spark Open on Fireworks and Baseten for the open-weights comparison. Corpus: 64 public Florida Medicaid, Medicare, Medicaid, and HIPAA documents, 2,589 pages.
 
-Live at https://recourse-murex.vercel.app (the API runs on Modal; a case costs about $0.11 in model credits and takes about a minute: 52 to 74 seconds in the measured site runs since Oct 29). "See a sample case" on the landing replays a recorded run; "Start with your letter" runs a new one. Sample letters to paste are under `cases/letters/`.
+Live at https://recourse-murex.vercel.app (the API runs on Modal; a case costs about $0.11 in model credits and takes about a minute: 51 to 74 seconds in the measured site runs since Oct 29). "See a sample case" on the landing replays a recorded run; "Start with your letter" runs a new one. Sample letters to paste are under `cases/letters/`.
 
 Why it matters: KFF's 2025 analysis of prior authorization data puts denial rates at about 12% in Medicare Advantage, 14% in Medicaid managed care, and 18% in ACA marketplace plans, finds that denials are rarely appealed, and that 67%, 47%, and 43% of appealed denials respectively were overturned. Most people never file. The letter, the deadline, and the rule are the hard part, and they are what this does.
 
