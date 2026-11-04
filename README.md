@@ -46,7 +46,7 @@ flowchart TD
 
   api --> intake
   corpus[(Modal volume: 64 PDFs, 4,131 page-bounded chunks)]
-  corpus -->|BM25 + dense, RRF, reranker| answer
+  answer -->|BM25 + dense, RRF, reranker| corpus
   verdict -.->|same stage, same findings| second[Second opinion: Muse Spark Open on Baseten]
   verify -.->|on See the page| vision[Vision check: reads the highlighted page back]
 ```
