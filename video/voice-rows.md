@@ -1,6 +1,6 @@
 # The eight spoken rows, one per clip, for the voice track
 
-Generate each row as its own audio file, named row1 to row8. The row's span is the time its clip must fit; the picture holds at each row's end, so a clip shorter than the span is fine and a longer one is not. Read the numbers as written (words, not numerals). Total 390 words.
+Generate each row as its own audio file, named row1 to row8. The row's span is the time its clip must fit; the picture holds at each row's end, so a clip shorter than the span is fine and a longer one is not. Read the numbers as written (words, not numerals). Total 387 words. The spans below were the first cut's; the final video runs 2:27 on `video/timeline.mjs`, which places the rows end to end.
 
 ## row1  (0:00 to 0:20, 47 words)
 

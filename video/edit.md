@@ -237,3 +237,15 @@ Decided by Alvaro (Oct 31, 2026, by prompt): yes to all eight. Tuesday's screen 
 - `c_sample`'s replay timing.
 - Whether the case page scrolls itself when the verdict lands. On Oct 29 the run script scrolled it (`run.mjs` line 162), so shot 4 assumes Alvaro scrolls.
 - The voice timings per row are word counts at the script's spans. Nobody has read them aloud against the cut.
+
+## Round 2, Nov 3: the picture retimed to the voice
+
+Alvaro's notes on the first voiced mix (Nov 3): long pauses between sections, show where to look, both letter pages, a livelier second opinion, a better numbers screen, music. Built the same evening; nothing committed.
+
+- One timeline: `video/timeline.mjs` places the eight ElevenLabs rows end to end (each row's own pauses kept, a 0.35 to 0.5 s breath at a row start, 0.5 s after its last word, 2 s at the end) and adds a pause only where the picture needs a beat. `backup.mjs` cuts every piece and draws every mark on the words it reads from there, and `voice-mix.mjs` places the voice from the same table. `node video/timeline.mjs` prints the rows and every silence of 0.3 s or more. Length 147.04 s. Largest silence inside a row 0.56 s, between rows 0.92 s.
+- Red ink marks (`video/ink.mjs`): drawn on over 0.3 to 0.4 s with a tapered, slightly wobbly stroke in the stamp red, held while relevant, faded at the cut. Underlines where the text runs on either side, arrows at buttons, a ring only at a click. Positions measured on the stills (ink boxes by pixel scan) and checked on extracted frames of the output (`take-check-3b/`).
+- Row 3: the same five segments and the same honest timer, the holds cut to 0.04 to 0.64 s by playing more footage (B to 48.6, C to 62.4; both static frames). Timer: A 1.2 to 5.0, B 14.3 to 22.9, C 31.9 to 36.7, D 38.8 to 40.7, E 50.1 to "reviewed 51.4 s". `check`: zero hold violations. No quote was struck in c_6f3143 (0 struck), so "struck out" has no mark.
+- Row 5: page 1 of the appeal letter (a new capture, `video-shots-2026-11-03/seg5-letter-page1-view.png`, a free reload of c_6f3143 on Nov 3; its date line reads November 3, 2026), recaptured at 2x and framed on the sheet alone (a glide from the date line to the claims at 1.9x, window x 69 to 743) so its side column, which says "33 days left", never shows against the deadline beat's 34; then page 2.
+- Row 7: six tiles on a bond sheet over the manila; each number counts up over 0.8 s and lands 0.05 s before the voice finishes it, then a red underline draws under it. Same facts as the Nov 2 card.
+- Music: `voice/music.mp3` trimmed to the video, in over 1 s, out over 2 s, 20 dB under the voice while it speaks and 14 dB under in the gaps (an envelope from the word times). Mix: -16.1 LUFS integrated, true peak -1.9 dBFS.
+- Outputs: picture `video-edit/take-2026-11-03b.mp4`, mix `video-edit/recourse-demo-2026-11-03b.mp4`. The Nov 2 picture and the first mix are untouched.
